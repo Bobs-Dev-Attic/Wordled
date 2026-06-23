@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:wordled/models/game.dart';
 import 'package:wordled/models/settings.dart';
 import 'package:wordled/models/stats.dart';
+import 'package:wordled/util/format.dart';
 
 void main() {
   group('evaluateGuess', () {
@@ -102,6 +103,18 @@ void main() {
       final text = g.shareText()!;
       expect(text, contains('1/6'));
       expect(text, contains('🟩🟩🟩🟩🟩'));
+    });
+  });
+
+  group('commas', () {
+    test('formats integers with thousands separators', () {
+      expect(commas(5), '5');
+      expect(commas(42), '42');
+      expect(commas(999), '999');
+      expect(commas(1000), '1,000');
+      expect(commas(53402), '53,402');
+      expect(commas(1234567), '1,234,567');
+      expect(commas(0), '0');
     });
   });
 

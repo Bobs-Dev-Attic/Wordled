@@ -4,6 +4,19 @@ All notable changes to Wordled are recorded here, newest first. Versions follow
 [semantic versioning](https://semver.org/). The in-app version is defined in
 `lib/version.dart` and surfaced in **Settings → About / Updates**.
 
+## [1.7.0] — 2026-06-23
+
+### Added
+- **Win confetti** scaled to performance — a first-try win rains a big burst,
+  tapering down to a modest one at the last allowed guess (dependency-free, and
+  skipped under the Battery Saver theme).
+- **Loss flow** — finishing without solving now shows an encouraging message and
+  a prominent **New word** button to play again with a fresh word.
+
+### Changed
+- All large numbers (statistics, guess distribution, dictionary word counts,
+  daily puzzle number) are now formatted with thousands separators.
+
 ## [1.6.0] — 2026-06-23
 
 ### Changed

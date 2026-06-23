@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../models/game.dart';
 import '../models/stats.dart';
+import '../util/format.dart';
 
 /// A modal showing aggregate statistics and, when a game just finished, the
-/// guess distribution and a share button.
+/// guess distribution plus share / play-again actions.
 class StatsDialog extends StatelessWidget {
   const StatsDialog({
     super.key,
@@ -12,36 +13,40 @@ class StatsDialog extends StatelessWidget {
     required this.maxGuesses,
     this.finishedGame,
     this.onShare,
-    this.onPlayAgain,
+    this.onNewWord,
   });
 
   final Stats stats;
   final int maxGuesses;
   final WordleGame? finishedGame;
   final VoidCallback? onShare;
-  final VoidCallback? onPlayAgain;
+
+  /// Starts a fresh game with a new random word. Offered on game over.
+  final VoidCallback? onNewWord;
 
   @override
   Widget build(BuildContext context) {
     final game = finishedGame;
     final justWon = game != null && game.status == GameStatus.won;
+    final justLost = game != null && game.status == GameStatus.lost;
 
     return AlertDialog(
       title: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (game != null)
+          if (justWon)
+            _titleLine(_praise(game.guesses.length))
+          else if (justLost) ...[
+            _titleLine(_encouragement(game.answer)),
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: Text(
-                justWon
-                    ? _praise(game.guesses.length)
-                    : 'The word was ${game.answer.toUpperCase()}',
+                'The word was ${game.answer.toUpperCase()}',
                 textAlign: TextAlign.center,
-                style:
-                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style: const TextStyle(fontSize: 14, color: Colors.grey),
               ),
             ),
+          ],
           const Text('STATISTICS',
               style: TextStyle(fontSize: 14, letterSpacing: 1)),
         ],
@@ -53,10 +58,12 @@ class StatsDialog extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _Stat(value: '${stats.played}', label: 'Played'),
+                _Stat(value: commas(stats.played), label: 'Played'),
                 _Stat(value: '${stats.winPercent}', label: 'Win %'),
-                _Stat(value: '${stats.currentStreak}', label: 'Current\nStreak'),
-                _Stat(value: '${stats.maxStreak}', label: 'Max\nStreak'),
+                _Stat(
+                    value: commas(stats.currentStreak),
+                    label: 'Current\nStreak'),
+                _Stat(value: commas(stats.maxStreak), label: 'Max\nStreak'),
               ],
             ),
             const SizedBox(height: 20),
@@ -72,15 +79,26 @@ class StatsDialog extends StatelessWidget {
         ),
       ),
       actions: [
-        if (onPlayAgain != null)
-          TextButton(onPressed: onPlayAgain, child: const Text('New game')),
+        if (game != null && onNewWord != null)
+          if (justLost)
+            FilledButton(
+                onPressed: onNewWord, child: const Text('New word'))
+          else
+            TextButton(onPressed: onNewWord, child: const Text('New word')),
         if (game != null && onShare != null)
-          FilledButton.icon(
-            onPressed: onShare,
-            icon: const Icon(Icons.share, size: 18),
-            label: const Text('Share'),
-          )
-        else
+          if (justWon)
+            FilledButton.icon(
+              onPressed: onShare,
+              icon: const Icon(Icons.share, size: 18),
+              label: const Text('Share'),
+            )
+          else
+            TextButton.icon(
+              onPressed: onShare,
+              icon: const Icon(Icons.share, size: 18),
+              label: const Text('Share'),
+            ),
+        if (game == null)
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             child: const Text('Close'),
@@ -88,6 +106,15 @@ class StatsDialog extends StatelessWidget {
       ],
     );
   }
+
+  Widget _titleLine(String text) => Padding(
+        padding: const EdgeInsets.only(bottom: 6),
+        child: Text(
+          text,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+      );
 
   String _praise(int guesses) => switch (guesses) {
         1 => 'Genius!',
@@ -97,6 +124,19 @@ class StatsDialog extends StatelessWidget {
         5 => 'Great!',
         _ => 'Phew!',
       };
+
+  /// A stable-per-word encouragement message for a loss.
+  String _encouragement(String answer) {
+    const messages = [
+      'So close — you\'ll get the next one!',
+      'Don\'t give up, give it another go!',
+      'Tough one! Shake it off and try again.',
+      'Nice effort — a fresh word awaits.',
+      'Almost had it! Ready for another?',
+      'Better luck on the next word!',
+    ];
+    return messages[answer.hashCode.abs() % messages.length];
+  }
 }
 
 class _Stat extends StatelessWidget {
@@ -159,7 +199,7 @@ class _Distribution extends StatelessWidget {
                           color: i == highlight
                               ? const Color(0xFF538D4E)
                               : const Color(0xFF3A3A3C),
-                          child: Text('$count',
+                          child: Text(commas(count),
                               style: const TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold,

@@ -11,8 +11,10 @@ import '../services/storage.dart';
 import '../services/update_service.dart';
 import '../services/word_repository.dart';
 import '../theme.dart';
+import '../util/format.dart';
 import '../version.dart';
 import '../widgets/board.dart';
+import '../widgets/confetti.dart';
 import '../widgets/keyboard.dart';
 import '../widgets/stats_dialog.dart';
 import 'how_to_play.dart';
@@ -56,6 +58,10 @@ class _GameScreenState extends State<GameScreen>
   int _hintsUsed = 0;
   String? _flashKey;
   int _hintSerial = 0;
+
+  // Win confetti.
+  int _confettiSerial = 0;
+  int _confettiCount = 0;
 
   final FocusNode _focusNode = FocusNode();
   late final AnimationController _shake = AnimationController(
@@ -266,6 +272,20 @@ class _GameScreenState extends State<GameScreen>
       await widget.storage.saveStats(_settings.configKey, _stats);
     }
     if (!mounted) return;
+    if (game.status == GameStatus.won) {
+      // More confetti for fewer tries: scale from a modest burst at the last
+      // allowed guess up to a big one for a first-try win.
+      final span = (game.maxGuesses - 1).clamp(1, 1 << 30);
+      final frac = ((game.maxGuesses - game.guesses.length) / span)
+          .clamp(0.0, 1.0);
+      setState(() {
+        _confettiCount = (50 + frac * 200).round();
+        _confettiSerial++;
+      });
+      // Let the burst land before the stats dialog covers the screen.
+      await Future<void>.delayed(const Duration(milliseconds: 900));
+      if (!mounted) return;
+    }
     await _showStats(finished: true);
   }
 
@@ -300,7 +320,7 @@ class _GameScreenState extends State<GameScreen>
                 Navigator.of(context).pop();
               }
             : null,
-        onPlayAgain: game.mode == GameMode.practice
+        onNewWord: finished
             ? () {
                 Navigator.of(context).pop();
                 _startGame(GameMode.practice);
@@ -460,7 +480,7 @@ class _GameScreenState extends State<GameScreen>
               child: Text(
                 isPractice
                     ? 'New word · ${_settings.wordLength} letters'
-                    : 'Daily #${game?.puzzleNumber ?? ''} · '
+                    : 'Daily #${game?.puzzleNumber != null ? commas(game!.puzzleNumber!) : ''} · '
                         '${_settings.wordLength} letters',
                 style: const TextStyle(
                     fontSize: 12, color: Color(0xFF818384), letterSpacing: 1),
@@ -471,38 +491,51 @@ class _GameScreenState extends State<GameScreen>
         body: Container(
           // Subtle diagonal gradient behind the whole play area for some life.
           decoration: BoxDecoration(gradient: colors.backgroundGradient),
-          child: SafeArea(
-            child: _loading || game == null
-                ? const Center(child: CircularProgressIndicator())
-                : Column(
-                    children: [
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.all(8),
-                          child: Board(
-                            game: game,
-                            currentInput: _input,
-                            colors: colors,
-                            shake: _shake,
-                            revealRow: _revealRow,
-                            reduceMotion: _reduceMotion,
+          child: Stack(
+            children: [
+              SafeArea(
+                child: _loading || game == null
+                    ? const Center(child: CircularProgressIndicator())
+                    : Column(
+                        children: [
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.all(8),
+                              child: Board(
+                                game: game,
+                                currentInput: _input,
+                                colors: colors,
+                                shake: _shake,
+                                revealRow: _revealRow,
+                                reduceMotion: _reduceMotion,
+                              ),
+                            ),
                           ),
-                        ),
+                          ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 600),
+                            child: Keyboard(
+                              keyStatuses: game.keyStatuses,
+                              colors: colors,
+                              onKey: _onKey,
+                              onEnter: _onEnter,
+                              onBackspace: _onBackspace,
+                              flashLetter: _flashKey,
+                              flashSerial: _hintSerial,
+                            ),
+                          ),
+                        ],
                       ),
-                      ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 600),
-                        child: Keyboard(
-                          keyStatuses: game.keyStatuses,
-                          colors: colors,
-                          onKey: _onKey,
-                          onEnter: _onEnter,
-                          onBackspace: _onBackspace,
-                          flashLetter: _flashKey,
-                          flashSerial: _hintSerial,
-                        ),
-                      ),
-                    ],
+              ),
+              if (!_reduceMotion)
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: ConfettiOverlay(
+                      serial: _confettiSerial,
+                      count: _confettiCount,
+                    ),
                   ),
+                ),
+            ],
           ),
         ),
       ),

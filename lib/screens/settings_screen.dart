@@ -4,6 +4,7 @@ import '../models/palette.dart';
 import '../models/settings.dart';
 import '../services/update_service.dart';
 import '../services/word_repository.dart';
+import '../util/format.dart';
 import '../version.dart';
 import '../widgets/color_picker_dialog.dart';
 import 'log_viewer.dart';
@@ -297,7 +298,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       title: Text('${_settings.wordLength}-letter words'),
       subtitle: Text(loading
           ? 'Counting…'
-          : '$_allowedCount valid · $_answerCount possible answers'),
+          : '${commas(_allowedCount!)} valid · '
+              '${commas(_answerCount!)} possible answers'),
     );
   }
 
@@ -310,7 +312,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _answerCount = widget.words.answerCount(_settings.wordLength);
       _working = false;
     });
-    _toast('Word list reloaded: $_allowedCount words');
+    _toast('Word list reloaded: ${commas(_allowedCount!)} words');
   }
 
   Widget _stepperTile({
