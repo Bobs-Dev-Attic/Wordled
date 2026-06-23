@@ -152,7 +152,11 @@ class _GameScreenState extends State<GameScreen>
 
   void _useHint() {
     final game = _game;
-    if (game == null || game.isOver || _busy) return;
+    if (game == null || _busy) return;
+    if (game.isOver) {
+      _toast('Start a new word to use hints');
+      return;
+    }
     if (_hintsRemaining <= 0) {
       _toast('No hints left this game');
       return;
@@ -325,6 +329,7 @@ class _GameScreenState extends State<GameScreen>
         settings: _settings,
         lastVersion: widget.lastVersion,
         updateService: widget.updateService,
+        words: widget.words,
         onChanged: widget.onSettingsChanged,
       ),
     ));
@@ -438,12 +443,14 @@ class _GameScreenState extends State<GameScreen>
             if (hintsOn)
               Badge.count(
                 count: _hintsRemaining,
-                isLabelVisible: _hintsRemaining > 0,
+                isLabelVisible: canHint,
                 child: IconButton(
                   icon: const Icon(Icons.lightbulb_outline),
                   tooltip: 'Hint ($_hintsRemaining left)',
+                  // Keep the button enabled so the icon always renders at full
+                  // color; _useHint reports why a hint can't be used.
                   color: colors.tileText,
-                  onPressed: canHint ? _useHint : null,
+                  onPressed: _useHint,
                 ),
               ),
             IconButton(

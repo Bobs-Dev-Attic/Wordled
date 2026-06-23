@@ -92,6 +92,8 @@ self.addEventListener('fetch', (event) => {
   const request = event.request;
   if (request.method !== 'GET') return;
 
+  // Only ever cache/serve same-origin GETs; cross-origin requests are left to
+  // the network untouched so the worker can't be used as an open proxy.
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
 

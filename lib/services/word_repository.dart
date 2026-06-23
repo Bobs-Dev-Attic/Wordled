@@ -16,6 +16,22 @@ class WordRepository {
 
   bool isLoaded(int length) => _answers.containsKey(length);
 
+  /// Number of possible solution words bundled for [length].
+  int answerCount(int length) => _answers[length]?.length ?? 0;
+
+  /// Number of words accepted as valid guesses for [length].
+  int allowedCount(int length) => _allowed[length]?.length ?? 0;
+
+  /// Drops the cached lists for [length] and loads them again from the bundled
+  /// assets. The bundle is the source of truth and refreshes whenever the app
+  /// (and its service-worker cache) updates, so this is the offline-safe
+  /// "update word list" action — it never reaches out to the network.
+  Future<void> reload(int length) async {
+    _answers.remove(length);
+    _allowed.remove(length);
+    await ensureLoaded(length);
+  }
+
   /// Loads the word lists for [length] if not already loaded.
   Future<void> ensureLoaded(int length) async {
     if (isLoaded(length)) return;

@@ -145,9 +145,9 @@ class HowToPlayContent extends StatelessWidget {
             Divider(color: colors.tileBorder),
             const SizedBox(height: 8),
             Text(
-              'A new daily puzzle is released every day at midnight. Choose a '
-              'theme, word length, difficulty and more in Settings. Wordled '
-              'works fully offline once installed — play it in airplane mode.',
+              'Choose a theme, word length, difficulty and more in Settings. '
+              'Wordled works fully offline once installed — play it in '
+              'airplane mode.',
               style: TextStyle(fontSize: 14, color: textColor),
             ),
           ],

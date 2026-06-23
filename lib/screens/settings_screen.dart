@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/palette.dart';
 import '../models/settings.dart';
 import '../services/update_service.dart';
+import '../services/word_repository.dart';
 import '../version.dart';
 import '../widgets/color_picker_dialog.dart';
 import 'log_viewer.dart';
@@ -14,12 +15,14 @@ class SettingsScreen extends StatefulWidget {
     required this.settings,
     required this.lastVersion,
     required this.updateService,
+    required this.words,
     required this.onChanged,
   });
 
   final GameSettings settings;
   final String? lastVersion;
   final UpdateService updateService;
+  final WordRepository words;
   final ValueChanged<GameSettings> onChanged;
 
   @override
@@ -30,9 +33,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late GameSettings _settings = widget.settings;
   bool _working = false;
 
+  // Dictionary counts for the current word length (null while loading).
+  int? _allowedCount;
+  int? _answerCount;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCounts();
+  }
+
+  Future<void> _loadCounts() async {
+    await widget.words.ensureLoaded(_settings.wordLength);
+    if (!mounted) return;
+    setState(() {
+      _allowedCount = widget.words.allowedCount(_settings.wordLength);
+      _answerCount = widget.words.answerCount(_settings.wordLength);
+    });
+  }
+
   void _update(GameSettings next) {
+    final lengthChanged = next.wordLength != _settings.wordLength;
     setState(() => _settings = next);
     widget.onChanged(next);
+    if (lengthChanged) {
+      setState(() {
+        _allowedCount = null;
+        _answerCount = null;
+      });
+      _loadCounts();
+    }
   }
 
   @override
@@ -55,6 +85,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _wordLengthTile(),
           _guessCountTile(),
           _hintsTile(),
+          const Divider(),
+          _section('Dictionary'),
+          _wordCountTile(),
+          _actionTile(
+            icon: Icons.refresh,
+            title: 'Update word list',
+            subtitle: 'Reload the offline dictionary (refreshes when the app '
+                'updates)',
+            onTap: _updateWordList,
+          ),
           const Divider(),
           _section('Updates & Maintenance'),
           _versionTile(),
@@ -248,6 +288,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
       suffix: _settings.hintsPerGame == 0 ? 'off' : 'hints',
       onChanged: (v) => _update(_settings.copyWith(hintsPerGame: v)),
     );
+  }
+
+  Widget _wordCountTile() {
+    final loading = _allowedCount == null;
+    return ListTile(
+      leading: const Icon(Icons.menu_book_outlined),
+      title: Text('${_settings.wordLength}-letter words'),
+      subtitle: Text(loading
+          ? 'Counting…'
+          : '$_allowedCount valid · $_answerCount possible answers'),
+    );
+  }
+
+  Future<void> _updateWordList() async {
+    setState(() => _working = true);
+    await widget.words.reload(_settings.wordLength);
+    if (!mounted) return;
+    setState(() {
+      _allowedCount = widget.words.allowedCount(_settings.wordLength);
+      _answerCount = widget.words.answerCount(_settings.wordLength);
+      _working = false;
+    });
+    _toast('Word list reloaded: $_allowedCount words');
   }
 
   Widget _stepperTile({

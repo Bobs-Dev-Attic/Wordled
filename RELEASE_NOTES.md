@@ -4,6 +4,28 @@ All notable changes to Wordled are recorded here, newest first. Versions follow
 [semantic versioning](https://semver.org/). The in-app version is defined in
 `lib/version.dart` and surfaced in **Settings → About / Updates**.
 
+## [1.5.0] — 2026-06-23
+
+### Added
+- **Dictionary settings.** A new Settings section shows the word count for the
+  current length ("N valid · M possible answers") and an **Update word list**
+  button that reloads the offline dictionary from the bundle.
+
+### Fixed
+- The **hint icon** is now always visible; the button stays enabled and reports
+  why a hint isn't available (game over / none left) instead of greying out the
+  icon while still showing the count badge.
+
+### Changed
+- How To Play no longer mentions the daily-puzzle schedule.
+
+### Security
+- Added hardening HTTP headers on every response (Content-Security-Policy,
+  X-Frame-Options: DENY / frame-ancestors 'none', X-Content-Type-Options,
+  Referrer-Policy, Permissions-Policy, Cross-Origin-Opener-Policy). See the
+  pen-test review notes in the commit/PR discussion. Added clarifying security
+  comments in the storage and service-worker code.
+
 ## [1.4.1] — 2026-06-23
 
 ### Changed

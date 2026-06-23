@@ -12,6 +12,10 @@ import 'logger.dart';
 ///
 /// Stats and daily progress are scoped per board configuration (e.g. "5x6") so
 /// switching word length or guess count keeps independent records.
+///
+/// Security note: only non-sensitive game state is stored (no credentials or
+/// personal data), and nothing is transmitted off-device. On the web this maps
+/// to localStorage, which is wiped by the "nuclear reset" maintenance action.
 class Storage {
   Storage(this._prefs);
 
