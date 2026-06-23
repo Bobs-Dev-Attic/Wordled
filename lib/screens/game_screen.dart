@@ -10,6 +10,7 @@ import '../services/storage.dart';
 import '../services/update_service.dart';
 import '../services/word_repository.dart';
 import '../theme.dart';
+import '../version.dart';
 import '../widgets/board.dart';
 import '../widgets/keyboard.dart';
 import '../widgets/stats_dialog.dart';
@@ -441,8 +442,8 @@ class _GameScreenState extends State<GameScreen>
                           fontSize: 24,
                           fontWeight: FontWeight.w800,
                           letterSpacing: 3)),
-                  const Text('Offline word game',
-                      style: TextStyle(fontSize: 12, color: Colors.grey)),
+                  Text('Offline · v$kAppVersion',
+                      style: const TextStyle(fontSize: 12, color: Colors.grey)),
                 ],
               ),
             ),

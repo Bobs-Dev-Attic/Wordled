@@ -4,6 +4,12 @@ All notable changes to Wordled are recorded here, newest first. Versions follow
 [semantic versioning](https://semver.org/). The in-app version is defined in
 `lib/version.dart` and surfaced in **Settings → About / Updates**.
 
+## [1.3.1] — 2026-06-23
+
+### Changed
+- The drawer header subtitle now reads "Offline · v<version>" (shows the
+  running app version) instead of "Offline word game".
+
 ## [1.3.0] — 2026-06-23
 
 ### Changed
