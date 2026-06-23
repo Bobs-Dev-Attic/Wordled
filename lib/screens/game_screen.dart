@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../models/game.dart';
 import '../models/settings.dart';
 import '../models/stats.dart';
+import '../services/install_service.dart';
 import '../services/logger.dart';
 import '../services/storage.dart';
 import '../services/update_service.dart';
@@ -22,6 +23,7 @@ class GameScreen extends StatefulWidget {
     required this.storage,
     required this.words,
     required this.updateService,
+    required this.installService,
     required this.lastVersion,
     required this.onSettingsChanged,
   });
@@ -30,6 +32,7 @@ class GameScreen extends StatefulWidget {
   final Storage storage;
   final WordRepository words;
   final UpdateService updateService;
+  final InstallService installService;
   final String? lastVersion;
   final ValueChanged<GameSettings> onSettingsChanged;
 
@@ -265,6 +268,27 @@ class _GameScreenState extends State<GameScreen>
     ));
   }
 
+  /// Starts a fresh game. In daily mode the puzzle is fixed, so "New game"
+  /// begins a random practice round.
+  void _newGame() => _startGame(GameMode.practice);
+
+  Future<void> _installApp() async {
+    final shown = await widget.installService.promptInstall();
+    if (shown || !mounted) return;
+    final installed = widget.installService.isStandalone;
+    ScaffoldMessenger.of(context)
+      ..removeCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+        content: Text(
+          installed
+              ? 'Wordled is already installed.'
+              : 'To install: open your browser menu and choose '
+                  '"Add to Home screen" / "Install app".',
+        ),
+        duration: const Duration(seconds: 4),
+      ));
+  }
+
   // ---- Hardware keyboard ----------------------------------------------------
 
   KeyEventResult _handleHardwareKey(FocusNode node, KeyEvent event) {
@@ -310,15 +334,55 @@ class _GameScreenState extends State<GameScreen>
               tooltip: 'Statistics',
               onPressed: () => _showStats(),
             ),
-            IconButton(
-              icon: const Icon(Icons.help_outline),
-              tooltip: 'How to play',
-              onPressed: _openHelp,
-            ),
-            IconButton(
-              icon: const Icon(Icons.settings_outlined),
-              tooltip: 'Settings',
-              onPressed: _openSettings,
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert),
+              tooltip: 'Menu',
+              onSelected: (value) {
+                switch (value) {
+                  case 'new':
+                    _newGame();
+                  case 'settings':
+                    _openSettings();
+                  case 'help':
+                    _openHelp();
+                  case 'install':
+                    _installApp();
+                }
+              },
+              itemBuilder: (context) => const [
+                PopupMenuItem(
+                  value: 'new',
+                  child: ListTile(
+                    leading: Icon(Icons.refresh),
+                    title: Text('New game'),
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'settings',
+                  child: ListTile(
+                    leading: Icon(Icons.settings_outlined),
+                    title: Text('Settings'),
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'help',
+                  child: ListTile(
+                    leading: Icon(Icons.help_outline),
+                    title: Text('How to play'),
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'install',
+                  child: ListTile(
+                    leading: Icon(Icons.install_mobile_outlined),
+                    title: Text('Install app'),
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+              ],
             ),
           ],
           bottom: PreferredSize(

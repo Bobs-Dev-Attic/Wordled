@@ -4,6 +4,20 @@ All notable changes to Wordled are recorded here, newest first. Versions follow
 [semantic versioning](https://semver.org/). The in-app version is defined in
 `lib/version.dart` and surfaced in **Settings → About / Updates**.
 
+## [1.2.0] — 2026-06-23
+
+### Fixed
+- **Blank text / invisible letters.** The CanvasKit web renderer was relying on
+  a CDN-hosted default font, so on the deployed site every glyph (keyboard
+  letters, typed tiles, app-bar icons) rendered invisibly. Roboto is now
+  bundled as an asset and set as the default font family, so all text renders —
+  online and offline.
+
+### Added
+- **Overflow menu** in the top-right of the app bar with: New game, Settings,
+  How to play, and **Install app** (triggers the PWA "Add to Home screen"
+  prompt, with manual instructions as a fallback).
+
 ## [1.1.0] — 2026-06-23
 
 ### Added

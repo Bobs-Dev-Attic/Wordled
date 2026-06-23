@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'models/settings.dart';
 import 'screens/game_screen.dart';
+import 'services/install_service.dart';
 import 'services/logger.dart';
 import 'services/storage.dart';
 import 'services/update_service.dart';
@@ -19,10 +20,13 @@ Future<void> main() async {
   final updateService = UpdateService(storage);
   await updateService.trackVersion();
 
+  final installService = InstallService()..init();
+
   runApp(WordledApp(
     storage: storage,
     words: WordRepository(),
     updateService: updateService,
+    installService: installService,
     initialSettings: settings,
     lastVersion: lastVersion,
   ));
@@ -34,6 +38,7 @@ class WordledApp extends StatefulWidget {
     required this.storage,
     required this.words,
     required this.updateService,
+    required this.installService,
     required this.initialSettings,
     required this.lastVersion,
   });
@@ -41,6 +46,7 @@ class WordledApp extends StatefulWidget {
   final Storage storage;
   final WordRepository words;
   final UpdateService updateService;
+  final InstallService installService;
   final GameSettings initialSettings;
   final String? lastVersion;
 
@@ -69,6 +75,7 @@ class _WordledAppState extends State<WordledApp> {
         storage: widget.storage,
         words: widget.words,
         updateService: widget.updateService,
+        installService: widget.installService,
         lastVersion: widget.lastVersion,
         onSettingsChanged: _applySettings,
       ),

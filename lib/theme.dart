@@ -65,6 +65,7 @@ ThemeData buildTheme(Brightness brightness) {
   return ThemeData(
     useMaterial3: true,
     brightness: brightness,
+    fontFamily: 'Roboto',
     scaffoldBackgroundColor: bg,
     colorScheme: ColorScheme.fromSeed(
       seedColor: const Color(0xFF538D4E),
