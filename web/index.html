@@ -74,6 +74,22 @@
         setTimeout(function () { el.remove(); }, 350);
       }
     });
+
+    // Register the offline service worker ourselves. Flutter 3.44's bootstrap
+    // no longer registers it on a first visit (it only re-activates an existing
+    // registration), so without this the app would never cache for offline use.
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('flutter_service_worker.js').then(
+          function (reg) {
+            console.log('[wordled] service worker registered:', reg.scope);
+          },
+          function (err) {
+            console.error('[wordled] service worker registration failed:', err);
+          }
+        );
+      });
+    }
   </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>

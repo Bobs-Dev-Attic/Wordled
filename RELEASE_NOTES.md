@@ -4,6 +4,17 @@ All notable changes to Wordled are recorded here, newest first. Versions follow
 [semantic versioning](https://semver.org/). The in-app version is defined in
 `lib/version.dart` and surfaced in **Settings → About / Updates**.
 
+## [1.5.1] — 2026-06-23
+
+### Fixed
+- **Offline / airplane mode never worked.** Flutter 3.44's bootstrap stopped
+  registering the service worker on a first visit (it only re-activates an
+  already-registered one), so the offline cache was never populated. We now
+  register `flutter_service_worker.js` ourselves from `index.html`. The precache
+  step was also made resilient (per-resource, via `allSettled`) so one failed
+  request can't abort the whole install, and dotfiles are no longer precached.
+  Load the app online once after this update, then it works in airplane mode.
+
 ## [1.5.0] — 2026-06-23
 
 ### Added

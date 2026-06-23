@@ -46,6 +46,8 @@ const files = walk(buildDir)
   .map((f) => path.relative(buildDir, f).split(path.sep).join('/'))
   .filter((f) => f !== swName)
   .filter((f) => !f.endsWith('.symbols'))
+  // Skip dotfiles (e.g. .last_build_id) — not needed at runtime.
+  .filter((f) => !f.split('/').pop().startsWith('.'))
   .sort();
 
 // Per-file content hash, plus an overall version used to name the cache.
@@ -73,11 +75,22 @@ const CORE = ${JSON.stringify(coreList)};
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) =>
-      cache.addAll(Object.keys(RESOURCES).map((k) => new Request(k, { cache: 'reload' })))
-    )
-  );
+  event.waitUntil((async () => {
+    const cache = await caches.open(CACHE_NAME);
+    // Precache each resource independently. Using cache.addAll() would abort the
+    // entire install if any single request failed, silently breaking offline
+    // support; allSettled caches everything that succeeds instead.
+    await Promise.allSettled(
+      Object.keys(RESOURCES).map(async (key) => {
+        try {
+          const response = await fetch(new Request(key, { cache: 'reload' }));
+          if (response && response.ok) await cache.put(key, response);
+        } catch (err) {
+          // Ignore individual failures; the fetch handler falls back to network.
+        }
+      })
+    );
+  })());
 });
 
 self.addEventListener('activate', (event) => {
