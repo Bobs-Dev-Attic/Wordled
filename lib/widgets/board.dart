@@ -1,0 +1,252 @@
+import 'dart:math' as math;
+
+import 'package:flutter/material.dart';
+
+import '../models/game.dart';
+import '../theme.dart';
+
+/// The grid of letter tiles, sized to the game's word length and guess count.
+class Board extends StatelessWidget {
+  const Board({
+    super.key,
+    required this.game,
+    required this.currentInput,
+    required this.colors,
+    required this.shake,
+    required this.revealRow,
+  });
+
+  final WordleGame game;
+
+  /// Letters typed into the active row but not yet submitted.
+  final String currentInput;
+  final GameColors colors;
+
+  /// Horizontal shake animation for the active row (e.g. invalid word).
+  final Animation<double> shake;
+
+  /// The row index that should play its reveal flip animation, or null.
+  final int? revealRow;
+
+  /// Per-column flip delay used both here and by the screen's reveal timing.
+  static Duration flipDelay(int col) => Duration(milliseconds: col * 200);
+
+  @override
+  Widget build(BuildContext context) {
+    final cols = game.wordLength;
+    final rows = game.maxGuesses;
+    final evaluations = game.evaluations;
+    final activeRow = game.currentRow;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final gap = rows > 8 ? 4.0 : 5.0;
+        final maxTileW = (constraints.maxWidth - gap * (cols - 1)) / cols;
+        final maxTileH = (constraints.maxHeight - gap * (rows - 1)) / rows;
+        final tile = math.min(maxTileW, maxTileH).clamp(0.0, 64.0);
+        final boardWidth = tile * cols + gap * (cols - 1);
+
+        return Center(
+          child: SizedBox(
+            width: boardWidth,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (var row = 0; row < rows; row++)
+                  Padding(
+                    padding:
+                        EdgeInsets.only(bottom: row == rows - 1 ? 0 : gap),
+                    child: _buildRow(
+                      row: row,
+                      tile: tile,
+                      gap: gap,
+                      cols: cols,
+                      evaluations: evaluations,
+                      activeRow: activeRow,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildRow({
+    required int row,
+    required double tile,
+    required double gap,
+    required int cols,
+    required List<List<LetterStatus>> evaluations,
+    required int? activeRow,
+  }) {
+    final isActive = row == activeRow;
+    final isSubmitted = row < game.guesses.length;
+    final letters =
+        isSubmitted ? game.guesses[row] : (isActive ? currentInput : '');
+
+    Widget rowWidget = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (var col = 0; col < cols; col++)
+          Padding(
+            padding: EdgeInsets.only(right: col == cols - 1 ? 0 : gap),
+            child: _Tile(
+              size: tile,
+              letter: col < letters.length ? letters[col].toUpperCase() : '',
+              status:
+                  isSubmitted ? evaluations[row][col] : LetterStatus.empty,
+              colors: colors,
+              reveal: revealRow == row,
+              flipDelay: flipDelay(col),
+            ),
+          ),
+      ],
+    );
+
+    if (isActive) {
+      rowWidget = AnimatedBuilder(
+        animation: shake,
+        builder: (context, child) {
+          final dx =
+              math.sin(shake.value * math.pi * 4) * 8 * (1 - shake.value);
+          return Transform.translate(offset: Offset(dx, 0), child: child);
+        },
+        child: rowWidget,
+      );
+    }
+
+    return rowWidget;
+  }
+}
+
+/// A single letter tile that pops when a letter is entered and flips to reveal
+/// its evaluated color.
+class _Tile extends StatefulWidget {
+  const _Tile({
+    required this.size,
+    required this.letter,
+    required this.status,
+    required this.colors,
+    required this.reveal,
+    required this.flipDelay,
+  });
+
+  final double size;
+  final String letter;
+  final LetterStatus status;
+  final GameColors colors;
+  final bool reveal;
+  final Duration flipDelay;
+
+  @override
+  State<_Tile> createState() => _TileState();
+}
+
+class _TileState extends State<_Tile> with TickerProviderStateMixin {
+  late final AnimationController _flip = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 260),
+  );
+  late final AnimationController _pop = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 100),
+    lowerBound: 1.0,
+    upperBound: 1.08,
+  );
+
+  LetterStatus _shownStatus = LetterStatus.empty;
+
+  @override
+  void initState() {
+    super.initState();
+    _shownStatus = widget.status;
+    if (widget.reveal && widget.status != LetterStatus.empty) {
+      _startReveal();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _Tile oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.letter.isNotEmpty &&
+        oldWidget.letter.isEmpty &&
+        widget.status == LetterStatus.empty) {
+      _pop.forward(from: 1.0).then((_) => _pop.reverse());
+    }
+    if (widget.reveal &&
+        widget.status != LetterStatus.empty &&
+        oldWidget.status == LetterStatus.empty) {
+      _startReveal();
+    } else if (!widget.reveal && widget.status != _shownStatus) {
+      _shownStatus = widget.status;
+      _flip.value = 0;
+    }
+  }
+
+  Future<void> _startReveal() async {
+    await Future<void>.delayed(widget.flipDelay);
+    if (!mounted) return;
+    _flip.forward(from: 0);
+  }
+
+  @override
+  void dispose() {
+    _flip.dispose();
+    _pop.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = widget.colors;
+    return AnimatedBuilder(
+      animation: Listenable.merge([_flip, _pop]),
+      builder: (context, _) {
+        final t = _flip.value;
+        if (t >= 0.5 && _shownStatus != widget.status) {
+          _shownStatus = widget.status;
+        }
+        final angle = t * math.pi;
+        final displayAngle = angle > math.pi / 2 ? math.pi - angle : angle;
+
+        final status = _shownStatus;
+        final filled = status != LetterStatus.empty;
+        final hasLetter = widget.letter.isNotEmpty;
+
+        final bg = colors.forStatus(status);
+        final borderColor = filled
+            ? bg
+            : (hasLetter ? colors.pendingBorder : colors.tileBorder);
+
+        return Transform.scale(
+          scale: _pop.value,
+          child: Transform(
+            alignment: Alignment.center,
+            transform: Matrix4.identity()
+              ..setEntry(3, 2, 0.001)
+              ..rotateX(displayAngle),
+            child: Container(
+              width: widget.size,
+              height: widget.size,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: filled ? bg : colors.emptyTile,
+                border: Border.all(color: borderColor, width: 2),
+              ),
+              child: Text(
+                widget.letter,
+                style: TextStyle(
+                  fontSize: widget.size * 0.5,
+                  fontWeight: FontWeight.bold,
+                  color: filled ? colors.onColored : colors.tileText,
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
