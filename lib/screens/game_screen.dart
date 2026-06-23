@@ -55,7 +55,6 @@ class _GameScreenState extends State<GameScreen>
   // Hint state.
   int _hintsUsed = 0;
   String? _flashKey;
-  (int, int)? _hintCell;
   int _hintSerial = 0;
 
   final FocusNode _focusNode = FocusNode();
@@ -142,7 +141,6 @@ class _GameScreenState extends State<GameScreen>
       _busy = false;
       _hintsUsed = 0;
       _flashKey = null;
-      _hintCell = null;
     });
   }
 
@@ -172,10 +170,6 @@ class _GameScreenState extends State<GameScreen>
       switch (hint) {
         case KeyHint(:final letter):
           _flashKey = letter;
-          _hintCell = null;
-        case BoardHint(:final row, :final col):
-          _hintCell = (row, col);
-          _flashKey = null;
       }
     });
     log.d('game', 'Hint used ($_hintsUsed/${_settings.hintsPerGame}): $hint');
@@ -474,40 +468,42 @@ class _GameScreenState extends State<GameScreen>
             ),
           ),
         ),
-        body: SafeArea(
-          child: _loading || game == null
-              ? const Center(child: CircularProgressIndicator())
-              : Column(
-                  children: [
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: Board(
-                          game: game,
-                          currentInput: _input,
-                          colors: colors,
-                          shake: _shake,
-                          revealRow: _revealRow,
-                          reduceMotion: _reduceMotion,
-                          hintCell: _hintCell,
-                          hintSerial: _hintSerial,
+        body: Container(
+          // Subtle diagonal gradient behind the whole play area for some life.
+          decoration: BoxDecoration(gradient: colors.backgroundGradient),
+          child: SafeArea(
+            child: _loading || game == null
+                ? const Center(child: CircularProgressIndicator())
+                : Column(
+                    children: [
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Board(
+                            game: game,
+                            currentInput: _input,
+                            colors: colors,
+                            shake: _shake,
+                            revealRow: _revealRow,
+                            reduceMotion: _reduceMotion,
+                          ),
                         ),
                       ),
-                    ),
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 600),
-                      child: Keyboard(
-                        keyStatuses: game.keyStatuses,
-                        colors: colors,
-                        onKey: _onKey,
-                        onEnter: _onEnter,
-                        onBackspace: _onBackspace,
-                        flashLetter: _flashKey,
-                        flashSerial: _hintSerial,
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 600),
+                        child: Keyboard(
+                          keyStatuses: game.keyStatuses,
+                          colors: colors,
+                          onKey: _onKey,
+                          onEnter: _onEnter,
+                          onBackspace: _onBackspace,
+                          flashLetter: _flashKey,
+                          flashSerial: _hintSerial,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
+          ),
         ),
       ),
     );

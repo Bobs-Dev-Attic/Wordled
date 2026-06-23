@@ -18,8 +18,6 @@ class Board extends StatelessWidget {
     required this.shake,
     required this.revealRow,
     this.reduceMotion = false,
-    this.hintCell,
-    this.hintSerial = 0,
   });
 
   final WordleGame game;
@@ -36,12 +34,6 @@ class Board extends StatelessWidget {
 
   /// When true, skip the flip/pop animations (Battery Saver).
   final bool reduceMotion;
-
-  /// The tile to flash a hint arrow on, as (row, col), or null.
-  final (int, int)? hintCell;
-
-  /// Bumped each time a board hint is requested, to re-trigger the flash.
-  final int hintSerial;
 
   /// Per-column flip delay used both here and by the screen's reveal timing.
   static Duration flipDelay(int col) => Duration(milliseconds: col * 200);
@@ -116,10 +108,6 @@ class Board extends StatelessWidget {
               reveal: revealRow == row,
               reduceMotion: reduceMotion,
               flipDelay: flipDelay(col),
-              flashArrow: hintCell != null &&
-                  hintCell!.$1 == row &&
-                  hintCell!.$2 == col,
-              flashSerial: hintSerial,
             ),
           ),
       ],
@@ -152,8 +140,6 @@ class _Tile extends StatefulWidget {
     required this.reveal,
     required this.reduceMotion,
     required this.flipDelay,
-    required this.flashArrow,
-    required this.flashSerial,
   });
 
   final double size;
@@ -163,8 +149,6 @@ class _Tile extends StatefulWidget {
   final bool reveal;
   final bool reduceMotion;
   final Duration flipDelay;
-  final bool flashArrow;
-  final int flashSerial;
 
   @override
   State<_Tile> createState() => _TileState();
@@ -180,10 +164,6 @@ class _TileState extends State<_Tile> with TickerProviderStateMixin {
     duration: const Duration(milliseconds: 100),
     lowerBound: 1.0,
     upperBound: 1.08,
-  );
-  late final AnimationController _arrow = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 2400),
   );
 
   LetterStatus _shownStatus = LetterStatus.empty;
@@ -220,10 +200,6 @@ class _TileState extends State<_Tile> with TickerProviderStateMixin {
       _shownStatus = widget.status;
       _flip.value = 0;
     }
-
-    if (widget.flashArrow && widget.flashSerial != oldWidget.flashSerial) {
-      _arrow.forward(from: 0);
-    }
   }
 
   Future<void> _startReveal() async {
@@ -236,7 +212,6 @@ class _TileState extends State<_Tile> with TickerProviderStateMixin {
   void dispose() {
     _flip.dispose();
     _pop.dispose();
-    _arrow.dispose();
     super.dispose();
   }
 
@@ -244,7 +219,7 @@ class _TileState extends State<_Tile> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     final colors = widget.colors;
     return AnimatedBuilder(
-      animation: Listenable.merge([_flip, _pop, _arrow]),
+      animation: Listenable.merge([_flip, _pop]),
       builder: (context, _) {
         final t = _flip.value;
         if (t >= 0.5 && _shownStatus != widget.status) {
@@ -274,7 +249,9 @@ class _TileState extends State<_Tile> with TickerProviderStateMixin {
               width: widget.size,
               height: widget.size,
               decoration: BoxDecoration(
-                color: filled ? bg : colors.emptyTile,
+                // Filled tiles get a subtle diagonal gradient for depth.
+                color: filled ? null : colors.emptyTile,
+                gradient: filled ? GameColors.diagonalGradient(bg) : null,
                 border: Border.all(color: borderColor, width: 2),
               ),
               child: Stack(
@@ -290,8 +267,6 @@ class _TileState extends State<_Tile> with TickerProviderStateMixin {
                     ),
                   ),
                   if (filled) _placementIcon(status, textColor),
-                  if (widget.flashArrow && _arrow.value > 0 && _arrow.value < 1)
-                    _hintArrow(),
                 ],
               ),
             ),
@@ -317,20 +292,6 @@ class _TileState extends State<_Tile> with TickerProviderStateMixin {
         icon,
         size: widget.size * (status == LetterStatus.present ? 0.16 : 0.26),
         color: color.withValues(alpha: 0.85),
-      ),
-    );
-  }
-
-  Widget _hintArrow() {
-    // Pulse the arrow's opacity a few times across the animation.
-    final pulse = (math.sin(_arrow.value * math.pi * 6) + 1) / 2;
-    return Positioned.fill(
-      child: Center(
-        child: Icon(
-          Icons.swap_horiz,
-          size: widget.size * 0.62,
-          color: kHintAccent.withValues(alpha: 0.4 + 0.6 * pulse),
-        ),
       ),
     );
   }

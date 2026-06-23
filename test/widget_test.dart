@@ -106,7 +106,7 @@ void main() {
   });
 
   group('computeHint', () {
-    test('returns a key hint (answer letter) when no guesses yet', () {
+    test('always flashes a keyboard letter that is in the answer', () {
       final g =
           WordleGame(answer: 'crane', mode: GameMode.practice, maxGuesses: 6);
       final hint = computeHint(g);
@@ -114,13 +114,14 @@ void main() {
       expect('crane'.contains((hint as KeyHint).letter), isTrue);
     });
 
-    test('points at a misplaced letter on the board when one exists', () {
+    test('never hints a letter already locked into place', () {
       final g =
           WordleGame(answer: 'crane', mode: GameMode.practice, maxGuesses: 6);
-      g.submitGuess('react'); // r, e, c are present (misplaced)
-      final hint = computeHint(g);
-      expect(hint, isA<BoardHint>());
-      expect((hint as BoardHint).row, 0);
+      g.submitGuess('crash'); // c, r, a are correct; n and e remain unsolved
+      for (var i = 0; i < 20; i++) {
+        final hint = computeHint(g) as KeyHint;
+        expect(['n', 'e'].contains(hint.letter), isTrue);
+      }
     });
 
     test('returns null when the game is over', () {

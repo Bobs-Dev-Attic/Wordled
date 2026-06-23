@@ -4,6 +4,19 @@ All notable changes to Wordled are recorded here, newest first. Versions follow
 [semantic versioning](https://semver.org/). The in-app version is defined in
 `lib/version.dart` and surfaced in **Settings → About / Updates**.
 
+## [1.6.0] — 2026-06-23
+
+### Changed
+- **Hints simplified.** A hint now always flashes a random keyboard letter that
+  appears in the word (and isn't already solved). The board-arrow hint was
+  removed.
+- **Invalid keys.** Absent keyboard letters no longer get a diagonal strike;
+  they're just rendered in a dimmer letter color.
+
+### Added
+- **Diagonal gradients** on the background, the keyboard keys, and the filled
+  board tiles for a bit more depth/life.
+
 ## [1.5.1] — 2026-06-23
 
 ### Fixed

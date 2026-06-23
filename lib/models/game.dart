@@ -1,3 +1,5 @@
+import 'dart:math';
+
 /// The status of a single letter after a guess is evaluated.
 enum LetterStatus { empty, absent, present, correct }
 
@@ -194,56 +196,33 @@ class WordleGame {
   }
 }
 
-/// A hint the player can request. Either highlight a useful keyboard key, or
-/// point an arrow at an already-placed-but-misplaced letter on the board.
+/// A hint the player can request: highlight a useful keyboard key to play.
 sealed class GameHint {
   const GameHint();
 }
 
-/// Flash a valid keyboard key (a letter that is in the answer but the player
-/// hasn't locked into place yet).
+/// Flash a keyboard key — a letter that's in the answer but not yet locked into
+/// place.
 class KeyHint extends GameHint {
   const KeyHint(this.letter);
   final String letter;
 }
 
-/// Flash an arrow on a board tile holding a correct letter that's in the wrong
-/// spot (a "present"/misplaced letter).
-class BoardHint extends GameHint {
-  const BoardHint(this.row, this.col);
-  final int row;
-  final int col;
-}
+final Random _hintRandom = Random();
 
-/// Computes the most useful hint for the current [game] state, or null if no
-/// hint can be given. Prefers pointing out a misplaced letter already on the
-/// board; otherwise reveals an undiscovered answer letter on the keyboard.
-GameHint? computeHint(WordleGame game) {
+/// Picks a random helpful hint for the current [game]: a letter that's in the
+/// answer but not already placed correctly. Returns null if there's nothing
+/// left to reveal (game over, or every answer letter is already solved).
+GameHint? computeHint(WordleGame game, [Random? random]) {
   if (game.isOver) return null;
-
-  final evaluations = game.evaluations;
-  for (var r = evaluations.length - 1; r >= 0; r--) {
-    for (var c = 0; c < game.wordLength; c++) {
-      if (evaluations[r][c] == LetterStatus.present) {
-        return BoardHint(r, c);
-      }
-    }
-  }
-
+  final rng = random ?? _hintRandom;
   final keyStatuses = game.keyStatuses;
-  final answerLetters = game.answer.split('').toSet();
-  String? undiscovered;
-  String? fallback;
-  for (final ch in answerLetters) {
-    final status = keyStatuses[ch];
-    if (status == LetterStatus.correct) continue;
-    if (status == null) {
-      undiscovered ??= ch;
-    } else {
-      fallback ??= ch;
-    }
+  final candidates = <String>{};
+  for (final ch in game.answer.split('')) {
+    if (keyStatuses[ch] != LetterStatus.correct) candidates.add(ch);
   }
-  final pick = undiscovered ?? fallback;
-  return pick != null ? KeyHint(pick) : null;
+  if (candidates.isEmpty) return null;
+  final list = candidates.toList();
+  return KeyHint(list[rng.nextInt(list.length)]);
 }
 

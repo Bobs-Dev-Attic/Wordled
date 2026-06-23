@@ -124,8 +124,8 @@ class HowToPlayContent extends StatelessWidget {
             const SizedBox(height: 6),
             _MarkerRow(
               icon: Icons.keyboard,
-              text: 'Letters not in the word are dimmed with a diagonal line '
-                  'across the key.',
+              text: 'Letters not in the word are shown in a dimmer color on the '
+                  'keyboard.',
               colors: colors,
             ),
             const SizedBox(height: 16),
@@ -136,9 +136,9 @@ class HowToPlayContent extends StatelessWidget {
                     color: textColor)),
             const SizedBox(height: 6),
             Text(
-              'Tap the 💡 hint button (next to the stats icon) to either flash a '
-              'useful keyboard letter or point an arrow at a misplaced letter on '
-              'the board. The number of hints per game is set in Settings.',
+              'Tap the 💡 hint button (next to the stats icon) to flash a letter '
+              'on the keyboard that appears in the word. The number of hints per '
+              'game is set in Settings.',
               style: TextStyle(fontSize: 14, color: textColor),
             ),
             const SizedBox(height: 16),

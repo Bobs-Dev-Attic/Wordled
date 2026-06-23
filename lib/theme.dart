@@ -45,6 +45,25 @@ class GameColors {
   Color textOn(Color bg) =>
       bg.computeLuminance() > 0.5 ? const Color(0xFF1A1A1B) : Colors.white;
 
+  /// A subtle top-left → bottom-right gradient around [base], used to give
+  /// tiles, keys and the background a little depth.
+  static LinearGradient diagonalGradient(Color base, {double delta = 0.05}) {
+    final hsl = HSLColor.fromColor(base);
+    final light =
+        hsl.withLightness((hsl.lightness + delta).clamp(0.0, 1.0)).toColor();
+    final dark =
+        hsl.withLightness((hsl.lightness - delta).clamp(0.0, 1.0)).toColor();
+    return LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [light, dark],
+    );
+  }
+
+  /// A gentle gradient for the whole-screen background.
+  LinearGradient get backgroundGradient =>
+      diagonalGradient(background, delta: 0.045);
+
   factory GameColors.from(Palette palette, Brightness brightness) {
     final effective = palette.forcedBrightness ?? brightness;
     final dark = effective == Brightness.dark;
