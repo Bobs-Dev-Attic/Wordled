@@ -124,7 +124,8 @@ class HowToPlayContent extends StatelessWidget {
             const SizedBox(height: 6),
             _MarkerRow(
               icon: Icons.keyboard,
-              text: 'Letters not in the word are struck through on the keyboard.',
+              text: 'Letters not in the word are dimmed with a diagonal line '
+                  'across the key.',
               colors: colors,
             ),
             const SizedBox(height: 16),

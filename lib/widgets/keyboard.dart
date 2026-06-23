@@ -139,9 +139,11 @@ class _LetterKeyState extends State<_LetterKey>
     final colors = widget.colors;
     final status = widget.status;
     final colored = status != LetterStatus.empty;
-    final bg = colored ? colors.forStatus(status) : colors.keyDefault;
-    final textColor = colored ? colors.textOn(bg) : colors.keyText;
     final struck = status == LetterStatus.absent;
+    final baseBg = colored ? colors.forStatus(status) : colors.keyDefault;
+    // Absent keys are darkened and get a faint diagonal strike across the cap.
+    final bg = struck ? _darken(baseBg, 0.32) : baseBg;
+    final textColor = colored ? colors.textOn(bg) : colors.keyText;
 
     return _KeyCap(
       radius: widget.radius,
@@ -174,20 +176,65 @@ class _LetterKeyState extends State<_LetterKey>
             child: child,
           );
         },
-        child: Text(
-          widget.letter.toUpperCase(),
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: textColor,
-            decoration: struck ? TextDecoration.lineThrough : null,
-            decorationColor: textColor,
-            decorationThickness: 2.5,
-          ),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Text(
+              widget.letter.toUpperCase(),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: textColor,
+              ),
+            ),
+            if (struck)
+              Positioned.fill(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(widget.radius),
+                  child: CustomPaint(
+                    painter: _DiagonalStrikePainter(
+                      color: textColor.withValues(alpha: 0.5),
+                    ),
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );
   }
+
+  /// Darkens [c] by [amount] (0–1) via HSL lightness.
+  static Color _darken(Color c, double amount) {
+    final hsl = HSLColor.fromColor(c);
+    return hsl
+        .withLightness((hsl.lightness * (1 - amount)).clamp(0.0, 1.0))
+        .toColor();
+  }
+}
+
+/// Paints a single diagonal line from the bottom-left to the top-right corner.
+class _DiagonalStrikePainter extends CustomPainter {
+  const _DiagonalStrikePainter({required this.color});
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 2.5
+      ..strokeCap = StrokeCap.round;
+    canvas.drawLine(
+      Offset(0, size.height),
+      Offset(size.width, 0),
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_DiagonalStrikePainter oldDelegate) =>
+      oldDelegate.color != color;
 }
 
 class _SpecialKey extends StatelessWidget {
