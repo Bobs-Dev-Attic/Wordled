@@ -4,6 +4,20 @@ All notable changes to Wordled are recorded here, newest first. Versions follow
 [semantic versioning](https://semver.org/). The in-app version is defined in
 `lib/version.dart` and surfaced in **Settings → About / Updates**.
 
+## [1.3.0] — 2026-06-23
+
+### Changed
+- **Navigation simplified.** Removed the top-right overflow menu; all
+  navigation now lives in the left drawer (the quick Statistics icon remains in
+  the app bar).
+- The drawer's game action is now **New Word** (starts a fresh random word),
+  replacing the separate "Daily puzzle" and "Practice" entries.
+
+### Added
+- The drawer shows **Install App** until the PWA is installed; once it's running
+  as an installed standalone app, that entry becomes **Check for Update**
+  (queries the service worker and offers to reload when a new version is ready).
+
 ## [1.2.0] — 2026-06-23
 
 ### Fixed

@@ -289,6 +289,43 @@ class _GameScreenState extends State<GameScreen>
       ));
   }
 
+  Future<void> _checkForUpdate() async {
+    ScaffoldMessenger.of(context)
+      ..removeCurrentSnackBar()
+      ..showSnackBar(const SnackBar(
+        content: Text('Checking for updates…'),
+        duration: Duration(milliseconds: 1500),
+      ));
+    final hasUpdate = await widget.updateService.checkForUpdates();
+    if (!mounted) return;
+    if (!hasUpdate) {
+      ScaffoldMessenger.of(context)
+        ..removeCurrentSnackBar()
+        ..showSnackBar(const SnackBar(
+          content: Text('You\'re on the latest version.'),
+        ));
+      return;
+    }
+    final apply = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Update available'),
+        content: const Text('A new version is ready. Reload now to apply it?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Later'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Reload'),
+          ),
+        ],
+      ),
+    );
+    if (apply == true) await widget.updateService.applyUpdate();
+  }
+
   // ---- Hardware keyboard ----------------------------------------------------
 
   KeyEventResult _handleHardwareKey(FocusNode node, KeyEvent event) {
@@ -334,56 +371,6 @@ class _GameScreenState extends State<GameScreen>
               tooltip: 'Statistics',
               onPressed: () => _showStats(),
             ),
-            PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert),
-              tooltip: 'Menu',
-              onSelected: (value) {
-                switch (value) {
-                  case 'new':
-                    _newGame();
-                  case 'settings':
-                    _openSettings();
-                  case 'help':
-                    _openHelp();
-                  case 'install':
-                    _installApp();
-                }
-              },
-              itemBuilder: (context) => const [
-                PopupMenuItem(
-                  value: 'new',
-                  child: ListTile(
-                    leading: Icon(Icons.refresh),
-                    title: Text('New game'),
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ),
-                PopupMenuItem(
-                  value: 'settings',
-                  child: ListTile(
-                    leading: Icon(Icons.settings_outlined),
-                    title: Text('Settings'),
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ),
-                PopupMenuItem(
-                  value: 'help',
-                  child: ListTile(
-                    leading: Icon(Icons.help_outline),
-                    title: Text('How to play'),
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ),
-                PopupMenuItem(
-                  value: 'install',
-                  child: ListTile(
-                    leading: Icon(Icons.install_mobile_outlined),
-                    title: Text('Install app'),
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ),
-              ],
-            ),
           ],
           bottom: PreferredSize(
             preferredSize: const Size.fromHeight(22),
@@ -391,7 +378,7 @@ class _GameScreenState extends State<GameScreen>
               padding: const EdgeInsets.only(bottom: 6),
               child: Text(
                 isPractice
-                    ? 'Practice · ${_settings.wordLength} letters'
+                    ? 'New word · ${_settings.wordLength} letters'
                     : 'Daily #${game?.puzzleNumber ?? ''} · '
                         '${_settings.wordLength} letters',
                 style: const TextStyle(
@@ -461,24 +448,13 @@ class _GameScreenState extends State<GameScreen>
             ),
             const Divider(),
             ListTile(
-              leading: const Icon(Icons.today_outlined),
-              title: const Text('Daily puzzle'),
-              selected: _mode == GameMode.daily,
+              leading: const Icon(Icons.refresh),
+              title: const Text('New Word'),
               onTap: () {
                 Navigator.pop(context);
-                _startGame(GameMode.daily, restore: true);
+                _newGame();
               },
             ),
-            ListTile(
-              leading: const Icon(Icons.casino_outlined),
-              title: const Text('Practice (random word)'),
-              selected: _mode == GameMode.practice,
-              onTap: () {
-                Navigator.pop(context);
-                _startGame(GameMode.practice);
-              },
-            ),
-            const Divider(),
             ListTile(
               leading: const Icon(Icons.help_outline),
               title: const Text('How to play'),
@@ -504,6 +480,27 @@ class _GameScreenState extends State<GameScreen>
               },
             ),
             const Spacer(),
+            const Divider(),
+            // Show "Install App" until the PWA is installed; once it's running
+            // standalone, offer "Check for Update" instead.
+            if (widget.installService.isStandalone)
+              ListTile(
+                leading: const Icon(Icons.system_update_alt),
+                title: const Text('Check for Update'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _checkForUpdate();
+                },
+              )
+            else
+              ListTile(
+                leading: const Icon(Icons.install_mobile_outlined),
+                title: const Text('Install App'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _installApp();
+                },
+              ),
           ],
         ),
       ),
