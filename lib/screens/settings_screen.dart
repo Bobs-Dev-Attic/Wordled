@@ -54,6 +54,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _difficultyTile(),
           _wordLengthTile(),
           _guessCountTile(),
+          _hintsTile(),
           const Divider(),
           _section('Updates & Maintenance'),
           _versionTile(),
@@ -235,6 +236,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
       max: kMaxGuesses,
       suffix: 'tries',
       onChanged: (v) => _update(_settings.copyWith(guessCount: v)),
+    );
+  }
+
+  Widget _hintsTile() {
+    return _stepperTile(
+      title: 'Hints per game',
+      value: _settings.hintsPerGame,
+      min: kMinHints,
+      max: kMaxHints,
+      suffix: _settings.hintsPerGame == 0 ? 'off' : 'hints',
+      onChanged: (v) => _update(_settings.copyWith(hintsPerGame: v)),
     );
   }
 

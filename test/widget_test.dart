@@ -105,6 +105,32 @@ void main() {
     });
   });
 
+  group('computeHint', () {
+    test('returns a key hint (answer letter) when no guesses yet', () {
+      final g =
+          WordleGame(answer: 'crane', mode: GameMode.practice, maxGuesses: 6);
+      final hint = computeHint(g);
+      expect(hint, isA<KeyHint>());
+      expect('crane'.contains((hint as KeyHint).letter), isTrue);
+    });
+
+    test('points at a misplaced letter on the board when one exists', () {
+      final g =
+          WordleGame(answer: 'crane', mode: GameMode.practice, maxGuesses: 6);
+      g.submitGuess('react'); // r, e, c are present (misplaced)
+      final hint = computeHint(g);
+      expect(hint, isA<BoardHint>());
+      expect((hint as BoardHint).row, 0);
+    });
+
+    test('returns null when the game is over', () {
+      final g =
+          WordleGame(answer: 'crane', mode: GameMode.practice, maxGuesses: 6);
+      g.submitGuess('crane');
+      expect(computeHint(g), isNull);
+    });
+  });
+
   group('GameSettings', () {
     test('round-trips through JSON with bounds clamped', () {
       final s = GameSettings(wordLength: 7, guessCount: 10);
@@ -115,10 +141,16 @@ void main() {
     });
 
     test('clamps out-of-range values from storage', () {
-      final json = '{"wordLength": 99, "guessCount": 1}';
+      final json = '{"wordLength": 99, "guessCount": 1, "hintsPerGame": 99}';
       final s = GameSettings.decode(json);
       expect(s.wordLength, kMaxWordLength);
       expect(s.guessCount, kMinGuesses);
+      expect(s.hintsPerGame, kMaxHints);
+    });
+
+    test('round-trips hints per game', () {
+      final s = GameSettings(hintsPerGame: 4);
+      expect(GameSettings.decode(s.encode()).hintsPerGame, 4);
     });
   });
 

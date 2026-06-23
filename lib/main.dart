@@ -64,12 +64,16 @@ class _WordledAppState extends State<WordledApp> {
 
   @override
   Widget build(BuildContext context) {
+    final forced = _settings.forcedBrightness;
+    final themeMode = forced == null
+        ? _settings.themeMode
+        : (forced == Brightness.dark ? ThemeMode.dark : ThemeMode.light);
     return MaterialApp(
       title: 'Wordled',
       debugShowCheckedModeBanner: false,
       theme: buildTheme(Brightness.light),
       darkTheme: buildTheme(Brightness.dark),
-      themeMode: _settings.themeMode,
+      themeMode: themeMode,
       home: GameScreen(
         settings: _settings,
         storage: widget.storage,

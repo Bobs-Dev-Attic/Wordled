@@ -102,15 +102,90 @@ class HowToPlayContent extends StatelessWidget {
             ),
             const SizedBox(height: 18),
             Divider(color: colors.tileBorder),
+            const SizedBox(height: 10),
+            Text('Tile & key markers',
+                style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: textColor)),
+            const SizedBox(height: 8),
+            _MarkerRow(
+              icon: Icons.check,
+              text: 'A check marks a letter in the correct spot.',
+              colors: colors,
+            ),
+            const SizedBox(height: 6),
+            _MarkerRow(
+              icon: Icons.circle,
+              iconSize: 9,
+              text: 'A dot marks a correct letter in the wrong spot.',
+              colors: colors,
+            ),
+            const SizedBox(height: 6),
+            _MarkerRow(
+              icon: Icons.keyboard,
+              text: 'Letters not in the word are struck through on the keyboard.',
+              colors: colors,
+            ),
+            const SizedBox(height: 16),
+            Text('Hints',
+                style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: textColor)),
+            const SizedBox(height: 6),
+            Text(
+              'Tap the 💡 hint button (next to the stats icon) to either flash a '
+              'useful keyboard letter or point an arrow at a misplaced letter on '
+              'the board. The number of hints per game is set in Settings.',
+              style: TextStyle(fontSize: 14, color: textColor),
+            ),
+            const SizedBox(height: 16),
+            Divider(color: colors.tileBorder),
             const SizedBox(height: 8),
             Text(
-              'A new daily puzzle is released every day at midnight. Wordled '
+              'A new daily puzzle is released every day at midnight. Choose a '
+              'theme, word length, difficulty and more in Settings. Wordled '
               'works fully offline once installed — play it in airplane mode.',
               style: TextStyle(fontSize: 14, color: textColor),
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _MarkerRow extends StatelessWidget {
+  const _MarkerRow({
+    required this.icon,
+    required this.text,
+    required this.colors,
+    this.iconSize = 18,
+  });
+
+  final IconData icon;
+  final String text;
+  final GameColors colors;
+  final double iconSize;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 26,
+          child: Center(
+            child: Icon(icon, size: iconSize, color: colors.tileText),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(text,
+              style: TextStyle(fontSize: 14, color: colors.tileText)),
+        ),
+      ],
     );
   }
 }
@@ -203,21 +278,42 @@ class _MiniTile extends StatelessWidget {
     final filled = status != LetterStatus.empty;
     final bg = filled ? colors.forStatus(status) : colors.emptyTile;
     final border = filled ? bg : colors.tileBorder;
+    final textColor = filled ? colors.textOn(bg) : colors.tileText;
+    final marker = switch (status) {
+      LetterStatus.correct => Icons.check,
+      LetterStatus.present => Icons.circle,
+      _ => null,
+    };
     return Container(
       width: 38,
       height: 38,
-      alignment: Alignment.center,
       decoration: BoxDecoration(
         color: bg,
         border: Border.all(color: border, width: 2),
       ),
-      child: Text(
-        letter,
-        style: TextStyle(
-          fontSize: 19,
-          fontWeight: FontWeight.bold,
-          color: filled ? colors.onColored : colors.tileText,
-        ),
+      child: Stack(
+        children: [
+          Center(
+            child: Text(
+              letter,
+              style: TextStyle(
+                fontSize: 19,
+                fontWeight: FontWeight.bold,
+                color: textColor,
+              ),
+            ),
+          ),
+          if (marker != null)
+            Positioned(
+              top: 2,
+              left: 2,
+              child: Icon(
+                marker,
+                size: status == LetterStatus.present ? 7 : 11,
+                color: textColor.withValues(alpha: 0.85),
+              ),
+            ),
+        ],
       ),
     );
   }

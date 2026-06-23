@@ -4,10 +4,10 @@
 library;
 
 /// Human-readable semantic version.
-const String kAppVersion = '1.3.1';
+const String kAppVersion = '1.4.0';
 
 /// Monotonically increasing build number.
-const int kBuildNumber = 5;
+const int kBuildNumber = 6;
 
 /// A compact identifier combining version and build, e.g. "1.1.0+2".
 const String kAppVersionFull = '$kAppVersion+$kBuildNumber';

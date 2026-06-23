@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 
 import 'game.dart';
 
-/// The set of tile/key colors used to render evaluations. A palette is either
-/// one of the built-in presets or a user-defined custom palette.
+/// The set of tile/key colors used to render evaluations. A palette may be a
+/// simple color triple (correct/present/absent) or a full "theme" that also
+/// overrides the background and chrome colors and forces a brightness.
 @immutable
 class Palette {
   const Palette({
@@ -12,6 +13,12 @@ class Palette {
     required this.correct,
     required this.present,
     required this.absent,
+    this.forcedBrightness,
+    this.background,
+    this.tileBorder,
+    this.keyDefault,
+    this.onSurface,
+    this.reduceMotion = false,
   });
 
   /// Stable identifier persisted in settings.
@@ -20,6 +27,16 @@ class Palette {
   final Color correct;
   final Color present;
   final Color absent;
+
+  // Optional full-theme overrides (null = derive from brightness).
+  final Brightness? forcedBrightness;
+  final Color? background;
+  final Color? tileBorder;
+  final Color? keyDefault;
+  final Color? onSurface;
+
+  /// When true, the board skips its flip/pop animations (used by Battery Saver).
+  final bool reduceMotion;
 
   Color forStatus(LetterStatus status) => switch (status) {
         LetterStatus.correct => correct,
@@ -35,6 +52,12 @@ class Palette {
       correct: correct ?? this.correct,
       present: present ?? this.present,
       absent: absent ?? this.absent,
+      forcedBrightness: forcedBrightness,
+      background: background,
+      tileBorder: tileBorder,
+      keyDefault: keyDefault,
+      onSurface: onSurface,
+      reduceMotion: reduceMotion,
     );
   }
 
@@ -106,6 +129,49 @@ class Palette {
     absent: Color(0xFF455A64),
   );
 
+  /// A softer, dimmed dark theme that's easier on the eyes in the dark.
+  static const lowLight = Palette(
+    id: 'lowLight',
+    name: 'Low Light',
+    correct: Color(0xFF4A7A46),
+    present: Color(0xFF8C7A33),
+    absent: Color(0xFF2C2C2E),
+    forcedBrightness: Brightness.dark,
+    background: Color(0xFF0E0E0F),
+    tileBorder: Color(0xFF2A2A2C),
+    keyDefault: Color(0xFF55585A),
+    onSurface: Color(0xFFC6C6CA),
+  );
+
+  /// Grayscale theme — relies on shape (the placement icons) plus shade.
+  static const monochrome = Palette(
+    id: 'monochrome',
+    name: 'Monochrome',
+    correct: Color(0xFFD7DADC), // light gray (dark text via luminance)
+    present: Color(0xFF9AA0A3), // mid gray
+    absent: Color(0xFF3A3A3C), // dark gray
+    forcedBrightness: Brightness.dark,
+    background: Color(0xFF121213),
+    tileBorder: Color(0xFF3A3A3C),
+    keyDefault: Color(0xFF6E7173),
+    onSurface: Color(0xFFE6E6E6),
+  );
+
+  /// Pure-black, low-power theme; also disables board animations.
+  static const batterySaver = Palette(
+    id: 'batterySaver',
+    name: 'Battery Saver',
+    correct: Color(0xFF3E6B3A),
+    present: Color(0xFF6E6130),
+    absent: Color(0xFF1A1A1A),
+    forcedBrightness: Brightness.dark,
+    background: Color(0xFF000000),
+    tileBorder: Color(0xFF262626),
+    keyDefault: Color(0xFF2A2A2A),
+    onSurface: Color(0xFFDADADA),
+    reduceMotion: true,
+  );
+
   /// All selectable presets (excludes the special custom entry).
   static const List<Palette> presets = [
     classic,
@@ -113,6 +179,9 @@ class Palette {
     darkForest,
     candy,
     ocean,
+    lowLight,
+    monochrome,
+    batterySaver,
   ];
 
   /// The default custom palette shown before the user edits it.

@@ -193,3 +193,57 @@ class WordleGame {
     return buffer.toString().trimRight();
   }
 }
+
+/// A hint the player can request. Either highlight a useful keyboard key, or
+/// point an arrow at an already-placed-but-misplaced letter on the board.
+sealed class GameHint {
+  const GameHint();
+}
+
+/// Flash a valid keyboard key (a letter that is in the answer but the player
+/// hasn't locked into place yet).
+class KeyHint extends GameHint {
+  const KeyHint(this.letter);
+  final String letter;
+}
+
+/// Flash an arrow on a board tile holding a correct letter that's in the wrong
+/// spot (a "present"/misplaced letter).
+class BoardHint extends GameHint {
+  const BoardHint(this.row, this.col);
+  final int row;
+  final int col;
+}
+
+/// Computes the most useful hint for the current [game] state, or null if no
+/// hint can be given. Prefers pointing out a misplaced letter already on the
+/// board; otherwise reveals an undiscovered answer letter on the keyboard.
+GameHint? computeHint(WordleGame game) {
+  if (game.isOver) return null;
+
+  final evaluations = game.evaluations;
+  for (var r = evaluations.length - 1; r >= 0; r--) {
+    for (var c = 0; c < game.wordLength; c++) {
+      if (evaluations[r][c] == LetterStatus.present) {
+        return BoardHint(r, c);
+      }
+    }
+  }
+
+  final keyStatuses = game.keyStatuses;
+  final answerLetters = game.answer.split('').toSet();
+  String? undiscovered;
+  String? fallback;
+  for (final ch in answerLetters) {
+    final status = keyStatuses[ch];
+    if (status == LetterStatus.correct) continue;
+    if (status == null) {
+      undiscovered ??= ch;
+    } else {
+      fallback ??= ch;
+    }
+  }
+  final pick = undiscovered ?? fallback;
+  return pick != null ? KeyHint(pick) : null;
+}
+

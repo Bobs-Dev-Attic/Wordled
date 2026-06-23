@@ -1,7 +1,10 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../models/game.dart';
 import '../theme.dart';
+import 'board.dart' show kHintAccent;
 
 /// The on-screen QWERTY keyboard with per-key color feedback.
 class Keyboard extends StatelessWidget {
@@ -12,6 +15,8 @@ class Keyboard extends StatelessWidget {
     required this.onKey,
     required this.onEnter,
     required this.onBackspace,
+    this.flashLetter,
+    this.flashSerial = 0,
   });
 
   final Map<String, LetterStatus> keyStatuses;
@@ -19,6 +24,12 @@ class Keyboard extends StatelessWidget {
   final ValueChanged<String> onKey;
   final VoidCallback onEnter;
   final VoidCallback onBackspace;
+
+  /// A keyboard letter to flash as a hint, or null.
+  final String? flashLetter;
+
+  /// Bumped each time a key hint is requested, to re-trigger the flash.
+  final int flashSerial;
 
   /// Slightly more rounded corners than the original, per design request.
   static const double _radius = 8;
@@ -57,6 +68,8 @@ class Keyboard extends StatelessWidget {
         colors: colors,
         radius: _radius,
         onTap: () => onKey(ch),
+        isFlashing: flashLetter == ch,
+        flashSerial: flashSerial,
       ));
     }
     if (isLast) {
@@ -70,13 +83,15 @@ class Keyboard extends StatelessWidget {
   }
 }
 
-class _LetterKey extends StatelessWidget {
+class _LetterKey extends StatefulWidget {
   const _LetterKey({
     required this.letter,
     required this.status,
     required this.colors,
     required this.radius,
     required this.onTap,
+    required this.isFlashing,
+    required this.flashSerial,
   });
 
   final String letter;
@@ -84,27 +99,90 @@ class _LetterKey extends StatelessWidget {
   final GameColors colors;
   final double radius;
   final VoidCallback onTap;
+  final bool isFlashing;
+  final int flashSerial;
+
+  @override
+  State<_LetterKey> createState() => _LetterKeyState();
+}
+
+class _LetterKeyState extends State<_LetterKey>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _flash = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 2200),
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.isFlashing) _flash.forward(from: 0);
+  }
+
+  @override
+  void didUpdateWidget(covariant _LetterKey oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isFlashing &&
+        (widget.flashSerial != oldWidget.flashSerial || !oldWidget.isFlashing)) {
+      _flash.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _flash.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final colors = widget.colors;
+    final status = widget.status;
     final colored = status != LetterStatus.empty;
     final bg = colored ? colors.forStatus(status) : colors.keyDefault;
+    final textColor = colored ? colors.textOn(bg) : colors.keyText;
+    final struck = status == LetterStatus.absent;
+
     return _KeyCap(
-      radius: radius,
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(radius),
-        ),
+      radius: widget.radius,
+      onTap: widget.onTap,
+      child: AnimatedBuilder(
+        animation: _flash,
+        builder: (context, child) {
+          final t = _flash.value;
+          // A few quick pulses that fade out over the animation.
+          final pulse =
+              (t > 0 && t < 1) ? math.sin(t * math.pi * 5).abs() * (1 - t) : 0.0;
+          return Container(
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: bg,
+              borderRadius: BorderRadius.circular(widget.radius),
+              border: pulse > 0
+                  ? Border.all(color: kHintAccent, width: 2.5)
+                  : null,
+              boxShadow: pulse > 0
+                  ? [
+                      BoxShadow(
+                        color: kHintAccent.withValues(alpha: pulse),
+                        blurRadius: 12 * pulse,
+                        spreadRadius: 1,
+                      ),
+                    ]
+                  : null,
+            ),
+            child: child,
+          );
+        },
         child: Text(
-          letter.toUpperCase(),
+          widget.letter.toUpperCase(),
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: colored ? colors.onColored : colors.keyText,
+            color: textColor,
+            decoration: struck ? TextDecoration.lineThrough : null,
+            decorationColor: textColor,
+            decorationThickness: 2.5,
           ),
         ),
       ),

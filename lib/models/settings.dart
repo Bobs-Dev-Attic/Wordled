@@ -36,12 +36,15 @@ const int kMinWordLength = 3;
 const int kMaxWordLength = 9;
 const int kMinGuesses = 4;
 const int kMaxGuesses = 20;
+const int kMinHints = 0;
+const int kMaxHints = 5;
 
 /// Persisted, user-editable game settings.
 class GameSettings {
   GameSettings({
     this.wordLength = 5,
     this.guessCount = 6,
+    this.hintsPerGame = 3,
     this.difficulty = Difficulty.normal,
     this.themeMode = ThemeMode.dark,
     this.paletteId = 'classic',
@@ -50,6 +53,7 @@ class GameSettings {
 
   int wordLength;
   int guessCount;
+  int hintsPerGame;
   Difficulty difficulty;
   ThemeMode themeMode;
 
@@ -58,6 +62,13 @@ class GameSettings {
   Palette customPalette;
 
   bool get usesCustomPalette => paletteId == Palette.customId;
+
+  /// If the selected preset forces a brightness (e.g. Battery Saver), that
+  /// brightness; otherwise null and the user's [themeMode] applies.
+  Brightness? get forcedBrightness {
+    if (usesCustomPalette || paletteId == 'classic') return null;
+    return Palette.presetById(paletteId).forcedBrightness;
+  }
 
   /// The active palette, resolved against the current theme brightness for the
   /// classic preset (which has light/dark variants).
@@ -74,6 +85,7 @@ class GameSettings {
   GameSettings copyWith({
     int? wordLength,
     int? guessCount,
+    int? hintsPerGame,
     Difficulty? difficulty,
     ThemeMode? themeMode,
     String? paletteId,
@@ -82,6 +94,7 @@ class GameSettings {
     return GameSettings(
       wordLength: wordLength ?? this.wordLength,
       guessCount: guessCount ?? this.guessCount,
+      hintsPerGame: hintsPerGame ?? this.hintsPerGame,
       difficulty: difficulty ?? this.difficulty,
       themeMode: themeMode ?? this.themeMode,
       paletteId: paletteId ?? this.paletteId,
@@ -96,6 +109,7 @@ class GameSettings {
   Map<String, dynamic> toJson() => {
         'wordLength': wordLength,
         'guessCount': guessCount,
+        'hintsPerGame': hintsPerGame,
         'difficulty': difficulty.name,
         'themeMode': themeMode.name,
         'paletteId': paletteId,
@@ -114,6 +128,11 @@ class GameSettings {
                 kMaxGuesses,
               ) ??
           6,
+      hintsPerGame: (json['hintsPerGame'] as num?)?.toInt().clamp(
+                kMinHints,
+                kMaxHints,
+              ) ??
+          3,
       difficulty: Difficulty.values.firstWhere(
         (d) => d.name == json['difficulty'],
         orElse: () => Difficulty.normal,

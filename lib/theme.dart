@@ -40,20 +40,31 @@ class GameColors {
         LetterStatus.empty => emptyTile,
       };
 
+  /// Black or white text, whichever contrasts better with [bg]. Lets light
+  /// tiles (e.g. the Monochrome palette or a light custom color) stay legible.
+  Color textOn(Color bg) =>
+      bg.computeLuminance() > 0.5 ? const Color(0xFF1A1A1B) : Colors.white;
+
   factory GameColors.from(Palette palette, Brightness brightness) {
-    final dark = brightness == Brightness.dark;
+    final effective = palette.forcedBrightness ?? brightness;
+    final dark = effective == Brightness.dark;
+    final text = palette.onSurface ??
+        (dark ? Colors.white : const Color(0xFF1A1A1B));
     return GameColors(
       correct: palette.correct,
       present: palette.present,
       absent: palette.absent,
       emptyTile: Colors.transparent,
-      tileBorder: dark ? const Color(0xFF3A3A3C) : const Color(0xFFD3D6DA),
+      tileBorder: palette.tileBorder ??
+          (dark ? const Color(0xFF3A3A3C) : const Color(0xFFD3D6DA)),
       pendingBorder: dark ? const Color(0xFF565758) : const Color(0xFF878A8C),
-      tileText: dark ? Colors.white : const Color(0xFF1A1A1B),
+      tileText: text,
       onColored: Colors.white,
-      keyDefault: dark ? const Color(0xFF818384) : const Color(0xFFD3D6DA),
-      keyText: dark ? Colors.white : const Color(0xFF1A1A1B),
-      background: dark ? const Color(0xFF121213) : Colors.white,
+      keyDefault: palette.keyDefault ??
+          (dark ? const Color(0xFF818384) : const Color(0xFFD3D6DA)),
+      keyText: text,
+      background: palette.background ??
+          (dark ? const Color(0xFF121213) : Colors.white),
     );
   }
 }

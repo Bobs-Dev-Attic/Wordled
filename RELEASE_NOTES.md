@@ -4,6 +4,28 @@ All notable changes to Wordled are recorded here, newest first. Versions follow
 [semantic versioning](https://semver.org/). The in-app version is defined in
 `lib/version.dart` and surfaced in **Settings → About / Updates**.
 
+## [1.4.0] — 2026-06-23
+
+### Added
+- **Placement icons on the board.** Evaluated tiles now show a small check on
+  correctly-placed letters and a dot on present-but-misplaced letters — a
+  color-blind-friendly cue shown on every theme.
+- **Struck-through keyboard letters.** Letters confirmed absent are now drawn
+  with a line through them on the keyboard.
+- **Three new themes:** Low Light (dimmed, easy-on-the-eyes dark), Monochrome
+  (grayscale; leans on the placement icons), and Battery Saver (pure-black OLED
+  theme that also disables board animations to save power).
+- **Hint feature.** A 💡 hint button next to the Statistics icon. Each hint
+  either flashes a useful keyboard letter or flashes an arrow on a misplaced
+  letter on the board. Hints per game are configurable in Settings
+  (0–5, default 3) and the button shows the remaining count.
+
+### Changed
+- Tile and key text now auto-picks black/white for contrast, so light palette
+  colors (e.g. Monochrome) stay legible.
+- How To Play updated to document the placement icons, struck-through keys, and
+  the hint button.
+
 ## [1.3.1] — 2026-06-23
 
 ### Changed

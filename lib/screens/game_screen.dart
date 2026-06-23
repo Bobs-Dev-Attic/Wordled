@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../models/game.dart';
+import '../models/palette.dart';
 import '../models/settings.dart';
 import '../models/stats.dart';
 import '../services/install_service.dart';
@@ -51,6 +52,12 @@ class _GameScreenState extends State<GameScreen>
   int? _revealRow;
   bool _busy = false;
 
+  // Hint state.
+  int _hintsUsed = 0;
+  String? _flashKey;
+  (int, int)? _hintCell;
+  int _hintSerial = 0;
+
   final FocusNode _focusNode = FocusNode();
   late final AnimationController _shake = AnimationController(
     vsync: this,
@@ -59,6 +66,14 @@ class _GameScreenState extends State<GameScreen>
 
   GameSettings get _settings => widget.settings;
   GameMode _mode = GameMode.daily;
+
+  /// Whether the active palette wants reduced motion (Battery Saver).
+  bool get _reduceMotion {
+    if (_settings.usesCustomPalette || _settings.paletteId == 'classic') {
+      return false;
+    }
+    return Palette.presetById(_settings.paletteId).reduceMotion;
+  }
 
   @override
   void initState() {
@@ -125,7 +140,51 @@ class _GameScreenState extends State<GameScreen>
       _input = '';
       _revealRow = null;
       _busy = false;
+      _hintsUsed = 0;
+      _flashKey = null;
+      _hintCell = null;
     });
+  }
+
+  // ---- Hints ----------------------------------------------------------------
+
+  int get _hintsRemaining => _settings.hintsPerGame - _hintsUsed;
+
+  void _useHint() {
+    final game = _game;
+    if (game == null || game.isOver || _busy) return;
+    if (_hintsRemaining <= 0) {
+      _toast('No hints left this game');
+      return;
+    }
+    final hint = computeHint(game);
+    if (hint == null) {
+      _toast('No hint available right now');
+      return;
+    }
+    setState(() {
+      _hintsUsed++;
+      _hintSerial++;
+      switch (hint) {
+        case KeyHint(:final letter):
+          _flashKey = letter;
+          _hintCell = null;
+        case BoardHint(:final row, :final col):
+          _hintCell = (row, col);
+          _flashKey = null;
+      }
+    });
+    log.d('game', 'Hint used ($_hintsUsed/${_settings.hintsPerGame}): $hint');
+  }
+
+  void _toast(String message) {
+    ScaffoldMessenger.of(context)
+      ..removeCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+        content: Text(message, textAlign: TextAlign.center),
+        duration: const Duration(milliseconds: 1400),
+        width: 260,
+      ));
   }
 
   GameColors _colors(BuildContext context) {
@@ -182,7 +241,9 @@ class _GameScreenState extends State<GameScreen>
     }
 
     final cols = game.wordLength;
-    final waitMs = Board.flipDelay(cols - 1).inMilliseconds + 260 + 150;
+    final waitMs = _reduceMotion
+        ? 80
+        : Board.flipDelay(cols - 1).inMilliseconds + 260 + 150;
     await Future<void>.delayed(Duration(milliseconds: waitMs));
     if (!mounted) return;
     setState(() => _busy = false);
@@ -358,15 +419,33 @@ class _GameScreenState extends State<GameScreen>
     final game = _game;
     final isPractice = _mode == GameMode.practice;
 
+    final hintsOn = _settings.hintsPerGame > 0;
+    final canHint =
+        hintsOn && game != null && !game.isOver && _hintsRemaining > 0;
+
     return Focus(
       focusNode: _focusNode,
       autofocus: true,
       onKeyEvent: _handleHardwareKey,
       child: Scaffold(
+        backgroundColor: colors.background,
         drawer: _buildDrawer(),
         appBar: AppBar(
+          backgroundColor: colors.background,
+          foregroundColor: colors.tileText,
           title: const Text('WORDLED'),
           actions: [
+            if (hintsOn)
+              Badge.count(
+                count: _hintsRemaining,
+                isLabelVisible: _hintsRemaining > 0,
+                child: IconButton(
+                  icon: const Icon(Icons.lightbulb_outline),
+                  tooltip: 'Hint ($_hintsRemaining left)',
+                  color: colors.tileText,
+                  onPressed: canHint ? _useHint : null,
+                ),
+              ),
             IconButton(
               icon: const Icon(Icons.leaderboard_outlined),
               tooltip: 'Statistics',
@@ -402,6 +481,9 @@ class _GameScreenState extends State<GameScreen>
                           colors: colors,
                           shake: _shake,
                           revealRow: _revealRow,
+                          reduceMotion: _reduceMotion,
+                          hintCell: _hintCell,
+                          hintSerial: _hintSerial,
                         ),
                       ),
                     ),
@@ -413,6 +495,8 @@ class _GameScreenState extends State<GameScreen>
                         onKey: _onKey,
                         onEnter: _onEnter,
                         onBackspace: _onBackspace,
+                        flashLetter: _flashKey,
+                        flashSerial: _hintSerial,
                       ),
                     ),
                   ],
