@@ -366,8 +366,13 @@ class _GameScreenState extends State<GameScreen>
       return;
     }
     if (!mounted) return;
-    // No prompt available (iOS, or not armed yet) — show manual instructions.
-    await showInstallHelp(context, isIOS: svc.isIOS);
+    if (svc.isIOS) {
+      // iOS Safari has no install prompt — show the Add-to-Home-Screen steps.
+      await showInstallHelp(context, isIOS: true);
+    } else {
+      // No prompt yet: point at the browser's own always-available install.
+      _toast('Open your browser menu (⋮) → "Install app" to add Wordled.');
+    }
   }
 
   Future<void> _checkForUpdate() async {

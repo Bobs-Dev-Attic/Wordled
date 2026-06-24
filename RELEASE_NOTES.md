@@ -4,6 +4,18 @@ All notable changes to Wordled are recorded here, newest first. Versions follow
 [semantic versioning](https://semver.org/). The in-app version is defined in
 `lib/version.dart` and surfaced in **Settings → About / Updates**.
 
+## [1.8.2] — 2026-06-24
+
+### Changed
+- **Removed the Content-Security-Policy header.** It was the only thing left that
+  differed from the working scrabble-offline PWA, and Chrome wasn't offering the
+  install prompt with it in place. Dropped it (and relaxed X-Frame-Options to
+  SAMEORIGIN) so installability matches the reference app. The other security
+  headers remain.
+- On Android/desktop, a tap on "Install App" with no prompt available now shows
+  a brief hint to use the browser's own install option instead of the full
+  step-by-step dialog (which is kept for iOS).
+
 ## [1.8.1] — 2026-06-24
 
 ### Fixed
