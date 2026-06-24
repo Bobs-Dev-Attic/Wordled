@@ -4,6 +4,14 @@ All notable changes to Wordled are recorded here, newest first. Versions follow
 [semantic versioning](https://semver.org/). The in-app version is defined in
 `lib/version.dart` and surfaced in **Settings → About / Updates**.
 
+## [1.10.0] — 2026-06-24
+
+### Added
+- **Bigger win celebration.** On a win the board tiles and the keyboard now run
+  a staggered rainbow color-cycle, **fireworks** burst alongside the existing
+  confetti, and the stats dialog is held back ~2 extra seconds (≈3s total) so
+  the celebration plays out. All of it is skipped under the Battery Saver theme.
+
 ## [1.9.0] — 2026-06-24
 
 ### Changed

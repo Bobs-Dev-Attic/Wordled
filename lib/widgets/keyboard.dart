@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../models/game.dart';
 import '../theme.dart';
 import 'board.dart' show kHintAccent;
+import 'fireworks.dart' show celebrationColor;
 
 /// The on-screen QWERTY keyboard with per-key color feedback.
 class Keyboard extends StatelessWidget {
@@ -17,6 +18,7 @@ class Keyboard extends StatelessWidget {
     required this.onBackspace,
     this.flashLetter,
     this.flashSerial = 0,
+    this.celebrateSerial = 0,
   });
 
   final Map<String, LetterStatus> keyStatuses;
@@ -31,10 +33,14 @@ class Keyboard extends StatelessWidget {
   /// Bumped each time a key hint is requested, to re-trigger the flash.
   final int flashSerial;
 
+  /// Bumped on a win to run a rainbow color-cycle across the keys.
+  final int celebrateSerial;
+
   /// Slightly more rounded corners than the original, per design request.
   static const double _radius = 8;
 
   static const _rows = ['qwertyuiop', 'asdfghjkl', 'zxcvbnm'];
+  static const _allLetters = 'qwertyuiopasdfghjklzxcvbnm';
 
   @override
   Widget build(BuildContext context) {
@@ -70,6 +76,8 @@ class Keyboard extends StatelessWidget {
         onTap: () => onKey(ch),
         isFlashing: flashLetter == ch,
         flashSerial: flashSerial,
+        celebrateSerial: celebrateSerial,
+        celebratePhase: _allLetters.indexOf(ch) / _allLetters.length,
       ));
     }
     if (isLast) {
@@ -92,6 +100,8 @@ class _LetterKey extends StatefulWidget {
     required this.onTap,
     required this.isFlashing,
     required this.flashSerial,
+    required this.celebrateSerial,
+    required this.celebratePhase,
   });
 
   final String letter;
@@ -101,16 +111,22 @@ class _LetterKey extends StatefulWidget {
   final VoidCallback onTap;
   final bool isFlashing;
   final int flashSerial;
+  final int celebrateSerial;
+  final double celebratePhase;
 
   @override
   State<_LetterKey> createState() => _LetterKeyState();
 }
 
 class _LetterKeyState extends State<_LetterKey>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late final AnimationController _flash = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 2200),
+  );
+  late final AnimationController _celebrate = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 2600),
   );
 
   @override
@@ -126,11 +142,15 @@ class _LetterKeyState extends State<_LetterKey>
         (widget.flashSerial != oldWidget.flashSerial || !oldWidget.isFlashing)) {
       _flash.forward(from: 0);
     }
+    if (widget.celebrateSerial != oldWidget.celebrateSerial) {
+      _celebrate.forward(from: 0);
+    }
   }
 
   @override
   void dispose() {
     _flash.dispose();
+    _celebrate.dispose();
     super.dispose();
   }
 
@@ -139,20 +159,24 @@ class _LetterKeyState extends State<_LetterKey>
     final colors = widget.colors;
     final status = widget.status;
     final colored = status != LetterStatus.empty;
-    final bg = colored ? colors.forStatus(status) : colors.keyDefault;
-    // Invalid (absent) letters get a slightly darker letter color instead of a
-    // strike-through; everything else uses the contrast color for the key.
-    final baseText = colored ? colors.textOn(bg) : colors.keyText;
-    final textColor = status == LetterStatus.absent
-        ? Color.lerp(baseText, bg, 0.5)!
-        : baseText;
 
     return _KeyCap(
       radius: widget.radius,
       onTap: widget.onTap,
       child: AnimatedBuilder(
-        animation: _flash,
-        builder: (context, child) {
+        animation: Listenable.merge([_flash, _celebrate]),
+        builder: (context, _) {
+          // Recomputed each tick so the celebration color cycles.
+          final celebrating = _celebrate.value > 0 && _celebrate.value < 1;
+          final bg = celebrating
+              ? celebrationColor(_celebrate.value, widget.celebratePhase)
+              : (colored ? colors.forStatus(status) : colors.keyDefault);
+          final baseText =
+              (colored || celebrating) ? colors.textOn(bg) : colors.keyText;
+          final textColor = (status == LetterStatus.absent && !celebrating)
+              ? Color.lerp(baseText, bg, 0.5)!
+              : baseText;
+
           final t = _flash.value;
           // A few quick pulses that fade out over the animation.
           final pulse =
@@ -176,17 +200,16 @@ class _LetterKeyState extends State<_LetterKey>
                     ]
                   : null,
             ),
-            child: child,
+            child: Text(
+              widget.letter.toUpperCase(),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: textColor,
+              ),
+            ),
           );
         },
-        child: Text(
-          widget.letter.toUpperCase(),
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: textColor,
-          ),
-        ),
       ),
     );
   }

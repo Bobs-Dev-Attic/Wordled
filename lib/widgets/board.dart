@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../models/game.dart';
 import '../theme.dart';
+import 'fireworks.dart' show celebrationColor;
 
 /// Accent color used for the flashing hint arrow.
 const Color kHintAccent = Color(0xFFFFC107);
@@ -18,6 +19,7 @@ class Board extends StatelessWidget {
     required this.shake,
     required this.revealRow,
     this.reduceMotion = false,
+    this.celebrateSerial = 0,
   });
 
   final WordleGame game;
@@ -34,6 +36,9 @@ class Board extends StatelessWidget {
 
   /// When true, skip the flip/pop animations (Battery Saver).
   final bool reduceMotion;
+
+  /// Bumped on a win to run a rainbow color-cycle across the filled tiles.
+  final int celebrateSerial;
 
   /// Per-column flip delay used both here and by the screen's reveal timing.
   static Duration flipDelay(int col) => Duration(milliseconds: col * 200);
@@ -108,6 +113,9 @@ class Board extends StatelessWidget {
               reveal: revealRow == row,
               reduceMotion: reduceMotion,
               flipDelay: flipDelay(col),
+              celebrateSerial: celebrateSerial,
+              celebratePhase:
+                  (row + col) / ((game.maxGuesses + cols) .clamp(2, 1 << 30)),
             ),
           ),
       ],
@@ -140,6 +148,8 @@ class _Tile extends StatefulWidget {
     required this.reveal,
     required this.reduceMotion,
     required this.flipDelay,
+    required this.celebrateSerial,
+    required this.celebratePhase,
   });
 
   final double size;
@@ -149,6 +159,8 @@ class _Tile extends StatefulWidget {
   final bool reveal;
   final bool reduceMotion;
   final Duration flipDelay;
+  final int celebrateSerial;
+  final double celebratePhase;
 
   @override
   State<_Tile> createState() => _TileState();
@@ -164,6 +176,10 @@ class _TileState extends State<_Tile> with TickerProviderStateMixin {
     duration: const Duration(milliseconds: 100),
     lowerBound: 1.0,
     upperBound: 1.08,
+  );
+  late final AnimationController _celebrate = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 2600),
   );
 
   LetterStatus _shownStatus = LetterStatus.empty;
@@ -200,6 +216,12 @@ class _TileState extends State<_Tile> with TickerProviderStateMixin {
       _shownStatus = widget.status;
       _flip.value = 0;
     }
+
+    if (widget.celebrateSerial != oldWidget.celebrateSerial &&
+        !widget.reduceMotion &&
+        widget.status != LetterStatus.empty) {
+      _celebrate.forward(from: 0);
+    }
   }
 
   Future<void> _startReveal() async {
@@ -212,6 +234,7 @@ class _TileState extends State<_Tile> with TickerProviderStateMixin {
   void dispose() {
     _flip.dispose();
     _pop.dispose();
+    _celebrate.dispose();
     super.dispose();
   }
 
@@ -219,7 +242,7 @@ class _TileState extends State<_Tile> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     final colors = widget.colors;
     return AnimatedBuilder(
-      animation: Listenable.merge([_flip, _pop]),
+      animation: Listenable.merge([_flip, _pop, _celebrate]),
       builder: (context, _) {
         final t = _flip.value;
         if (t >= 0.5 && _shownStatus != widget.status) {
@@ -232,7 +255,10 @@ class _TileState extends State<_Tile> with TickerProviderStateMixin {
         final filled = status != LetterStatus.empty;
         final hasLetter = widget.letter.isNotEmpty;
 
-        final bg = colors.forStatus(status);
+        final celebrating = filled && _celebrate.value > 0 && _celebrate.value < 1;
+        final bg = celebrating
+            ? celebrationColor(_celebrate.value, widget.celebratePhase)
+            : colors.forStatus(status);
         final borderColor = filled
             ? bg
             : (hasLetter ? colors.pendingBorder : colors.tileBorder);

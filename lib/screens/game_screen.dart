@@ -15,6 +15,7 @@ import '../util/format.dart';
 import '../version.dart';
 import '../widgets/board.dart';
 import '../widgets/confetti.dart';
+import '../widgets/fireworks.dart';
 import '../widgets/install_help_dialog.dart';
 import '../widgets/keyboard.dart';
 import '../widgets/stats_dialog.dart';
@@ -61,7 +62,7 @@ class _GameScreenState extends State<GameScreen>
   int _hintSerial = 0;
 
   // Win confetti.
-  int _confettiSerial = 0;
+  int _celebrateSerial = 0;
   int _confettiCount = 0;
 
   // Solve-time tracking (first guess -> last guess).
@@ -298,10 +299,12 @@ class _GameScreenState extends State<GameScreen>
           .clamp(0.0, 1.0);
       setState(() {
         _confettiCount = (50 + frac * 200).round();
-        _confettiSerial++;
+        // Drives confetti, fireworks, and the board/keyboard color cycle.
+        _celebrateSerial++;
       });
-      // Let the burst land before the stats dialog covers the screen.
-      await Future<void>.delayed(const Duration(milliseconds: 900));
+      // Let the celebration play out before the stats dialog covers it.
+      await Future<void>.delayed(
+          Duration(milliseconds: _reduceMotion ? 350 : 3000));
       if (!mounted) return;
     }
     await _showStats(finished: true);
@@ -529,6 +532,7 @@ class _GameScreenState extends State<GameScreen>
                                 shake: _shake,
                                 revealRow: _revealRow,
                                 reduceMotion: _reduceMotion,
+                                celebrateSerial: _celebrateSerial,
                               ),
                             ),
                           ),
@@ -542,20 +546,27 @@ class _GameScreenState extends State<GameScreen>
                               onBackspace: _onBackspace,
                               flashLetter: _flashKey,
                               flashSerial: _hintSerial,
+                              celebrateSerial: _celebrateSerial,
                             ),
                           ),
                         ],
                       ),
               ),
-              if (!_reduceMotion)
+              if (!_reduceMotion) ...[
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: FireworksOverlay(serial: _celebrateSerial),
+                  ),
+                ),
                 Positioned.fill(
                   child: IgnorePointer(
                     child: ConfettiOverlay(
-                      serial: _confettiSerial,
+                      serial: _celebrateSerial,
                       count: _confettiCount,
                     ),
                   ),
                 ),
+              ],
             ],
           ),
         ),
