@@ -4,6 +4,17 @@ All notable changes to Wordled are recorded here, newest first. Versions follow
 [semantic versioning](https://semver.org/). The in-app version is defined in
 `lib/version.dart` and surfaced in **Settings → About / Updates**.
 
+## [1.8.1] — 2026-06-24
+
+### Fixed
+- **"Install App" now actually installs (web).** The `beforeinstallprompt` event
+  was being captured from Dart in `InstallService.init()`, which runs only after
+  the Flutter engine boots — far too late, so Chrome's early-fired event was
+  always missed and the button fell back to the instructions dialog. The event
+  is now captured in plain JS in `index.html` at page load (and the Dart service
+  calls those helpers), so the native install prompt fires. This was unrelated
+  to Vercel Deployment Protection.
+
 ## [1.8.0] — 2026-06-24
 
 ### Added

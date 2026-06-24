@@ -1,48 +1,33 @@
 import 'dart:js_interop';
-import 'dart:js_interop_unsafe';
 
 import 'package:flutter/foundation.dart';
 import 'package:web/web.dart' as web;
 
 import 'logger.dart';
 
-/// Captures the browser's `beforeinstallprompt` event so the app can offer an
-/// in-app "Install app" action (Add to Home Screen) for the PWA.
-class InstallService {
-  JSObject? _deferredPrompt;
+// Helpers defined early in web/index.html, where the `beforeinstallprompt`
+// event is captured before the Flutter engine boots.
+@JS('pwaIsStandalone')
+external bool _pwaIsStandalone();
+@JS('pwaInstallAvailable')
+external bool _pwaInstallAvailable();
+@JS('pwaPromptInstall')
+external JSPromise<JSString> _pwaPromptInstall();
 
-  /// True when the browser has offered an installable prompt we can trigger.
+/// Web implementation: defers to the JS install helpers in index.html. The
+/// install prompt must be captured in plain JS at page load (Chrome fires
+/// `beforeinstallprompt` before Dart's `main()` runs), so this class only reads
+/// and triggers it.
+class InstallService {
+  /// Unused on web (state is read live from JS); kept for API parity.
   final ValueNotifier<bool> canInstall = ValueNotifier(false);
 
-  void init() {
-    try {
-      web.window.addEventListener(
-        'beforeinstallprompt',
-        ((web.Event e) {
-          e.preventDefault();
-          _deferredPrompt = e as JSObject;
-          canInstall.value = true;
-          log.i('install', 'Install prompt available');
-        }).toJS,
-      );
-      web.window.addEventListener(
-        'appinstalled',
-        ((web.Event e) {
-          _deferredPrompt = null;
-          canInstall.value = false;
-          log.i('install', 'App installed');
-        }).toJS,
-      );
-    } catch (e) {
-      log.w('install', 'Install service init failed: $e');
-    }
-  }
+  void init() {}
 
   /// Whether the app is already running as an installed standalone PWA.
   bool get isStandalone {
     try {
-      return web.window.matchMedia('(display-mode: standalone)').matches ||
-          web.window.matchMedia('(display-mode: fullscreen)').matches;
+      return _pwaIsStandalone();
     } catch (_) {
       return false;
     }
@@ -57,29 +42,31 @@ class InstallService {
       if (ua.contains('iphone') || ua.contains('ipad') || ua.contains('ipod')) {
         return true;
       }
-      // iPadOS 13+ reports as a Mac; distinguish it by touch support.
       return ua.contains('macintosh') && nav.maxTouchPoints > 1;
     } catch (_) {
       return false;
     }
   }
 
-  /// Whether a native install prompt is currently available to trigger.
-  bool get hasPrompt => _deferredPrompt != null;
+  /// Whether a native install prompt was captured and can be triggered.
+  bool get hasPrompt {
+    try {
+      return _pwaInstallAvailable();
+    } catch (_) {
+      return false;
+    }
+  }
 
-  /// Triggers the native install prompt. Returns true if a prompt was shown.
+  /// Triggers the captured install prompt. Returns true if the user accepted.
   Future<bool> promptInstall() async {
-    final prompt = _deferredPrompt;
-    if (prompt == null) {
+    if (!hasPrompt) {
       log.w('install', 'No deferred install prompt to show');
       return false;
     }
     try {
-      prompt.callMethod('prompt'.toJS);
-      _deferredPrompt = null;
-      canInstall.value = false;
-      log.i('install', 'Install prompt shown');
-      return true;
+      final outcome = (await _pwaPromptInstall().toDart).toDart;
+      log.i('install', 'Install prompt outcome: $outcome');
+      return outcome == 'accepted';
     } catch (e) {
       log.e('install', 'Failed to show install prompt: $e');
       return false;

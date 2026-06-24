@@ -66,6 +66,37 @@
   </div>
 
   <script>
+    // Capture the PWA install prompt as early as possible. Chrome fires
+    // `beforeinstallprompt` shortly after load — long before the Flutter engine
+    // finishes booting — so we must grab it here in plain JS, not from Dart, or
+    // it's missed and the in-app "Install App" button can never fire it.
+    window.deferredPwaPrompt = null;
+    window.addEventListener('beforeinstallprompt', function (e) {
+      e.preventDefault();
+      window.deferredPwaPrompt = e;
+      console.log('[wordled] install prompt captured');
+    });
+    window.addEventListener('appinstalled', function () {
+      window.deferredPwaPrompt = null;
+    });
+    window.pwaInstallAvailable = function () {
+      return window.deferredPwaPrompt != null;
+    };
+    window.pwaIsStandalone = function () {
+      return (window.matchMedia &&
+              (window.matchMedia('(display-mode: standalone)').matches ||
+               window.matchMedia('(display-mode: fullscreen)').matches)) ||
+             window.navigator.standalone === true;
+    };
+    window.pwaPromptInstall = async function () {
+      var p = window.deferredPwaPrompt;
+      if (!p) return 'unavailable';
+      p.prompt();
+      var choice = await p.userChoice;
+      window.deferredPwaPrompt = null;
+      return (choice && choice.outcome) ? choice.outcome : 'dismissed';
+    };
+
     // Remove the splash once Flutter has rendered the first frame.
     window.addEventListener('flutter-first-frame', function () {
       var el = document.getElementById('loading');

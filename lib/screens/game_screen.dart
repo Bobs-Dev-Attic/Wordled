@@ -360,13 +360,13 @@ class _GameScreenState extends State<GameScreen>
       _toast('Wordled is already installed.');
       return;
     }
-    // Prefer the native install prompt (Android / desktop Chrome & Edge).
+    // Fire the captured native install prompt (Android / desktop Chrome & Edge).
     if (svc.hasPrompt) {
-      final shown = await svc.promptInstall();
-      if (shown || !mounted) return;
+      await svc.promptInstall();
+      return;
     }
     if (!mounted) return;
-    // Otherwise (iOS, or prompt not yet available) show manual instructions.
+    // No prompt available (iOS, or not armed yet) — show manual instructions.
     await showInstallHelp(context, isIOS: svc.isIOS);
   }
 
