@@ -1,0 +1,59 @@
+name: Build Android APK
+
+# Builds a sideloadable Android APK on GitHub's runners (which, unlike the
+# Wordled dev sandbox, can reach Google's Android SDK / Maven hosts). The APK is
+# uploaded as a workflow artifact and published to the rolling "apk-latest"
+# GitHub Release for easy download.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'lib/**'
+      - 'assets/**'
+      - 'pubspec.yaml'
+      - 'pubspec.lock'
+      - 'android/**'
+      - '.github/workflows/build-apk.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.44.3
+
+      - run: flutter --version
+      - run: flutter pub get
+      - run: flutter build apk --release
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wordled-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+
+      - name: Publish to "apk-latest" release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apk-latest
+          name: Wordled APK (latest)
+          body: >
+            Latest debug-signed Wordled Android APK. Download
+            `app-release.apk`, enable "install unknown apps" for your browser /
+            files app, then open it to install. Fully offline once installed.
+          files: build/app/outputs/flutter-apk/app-release.apk

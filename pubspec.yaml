@@ -57,6 +57,9 @@ dev_dependencies:
 
 # Icon generation config: run `dart run flutter_launcher_icons`.
 flutter_launcher_icons:
+  image_path: "assets/icon/wordled_icon.png"
+  android: true
+  min_sdk_android: 21
   web:
     generate: true
     image_path: "assets/icon/wordled_icon.png"

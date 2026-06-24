@@ -4,6 +4,19 @@ All notable changes to Wordled are recorded here, newest first. Versions follow
 [semantic versioning](https://semver.org/). The in-app version is defined in
 `lib/version.dart` and surfaced in **Settings → About / Updates**.
 
+## [1.8.0] — 2026-06-24
+
+### Added
+- **Native Android app.** Added an Android build target so Wordled can be
+  installed as a real local app (no browser). The web-only update/install
+  services are now behind platform-conditional imports with native stubs, so the
+  same codebase compiles for both web and Android. Launcher icons are generated
+  from the app icon.
+- **CI APK build** (`.github/workflows/build-apk.yml`): builds a sideloadable
+  release APK on GitHub's runners (which can reach the Android SDK/Maven hosts,
+  unlike the dev sandbox) and publishes it to the rolling `apk-latest` GitHub
+  Release.
+
 ## [1.7.1] — 2026-06-24
 
 ### Changed
