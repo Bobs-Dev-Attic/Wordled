@@ -15,6 +15,7 @@ import '../util/format.dart';
 import '../version.dart';
 import '../widgets/board.dart';
 import '../widgets/confetti.dart';
+import '../widgets/install_help_dialog.dart';
 import '../widgets/keyboard.dart';
 import '../widgets/stats_dialog.dart';
 import 'how_to_play.dart';
@@ -354,20 +355,19 @@ class _GameScreenState extends State<GameScreen>
   void _newGame() => _startGame(GameMode.practice);
 
   Future<void> _installApp() async {
-    final shown = await widget.installService.promptInstall();
-    if (shown || !mounted) return;
-    final installed = widget.installService.isStandalone;
-    ScaffoldMessenger.of(context)
-      ..removeCurrentSnackBar()
-      ..showSnackBar(SnackBar(
-        content: Text(
-          installed
-              ? 'Wordled is already installed.'
-              : 'To install: open your browser menu and choose '
-                  '"Add to Home screen" / "Install app".',
-        ),
-        duration: const Duration(seconds: 4),
-      ));
+    final svc = widget.installService;
+    if (svc.isStandalone) {
+      _toast('Wordled is already installed.');
+      return;
+    }
+    // Prefer the native install prompt (Android / desktop Chrome & Edge).
+    if (svc.hasPrompt) {
+      final shown = await svc.promptInstall();
+      if (shown || !mounted) return;
+    }
+    if (!mounted) return;
+    // Otherwise (iOS, or prompt not yet available) show manual instructions.
+    await showInstallHelp(context, isIOS: svc.isIOS);
   }
 
   Future<void> _checkForUpdate() async {

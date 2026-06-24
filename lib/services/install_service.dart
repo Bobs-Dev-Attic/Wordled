@@ -48,6 +48,25 @@ class InstallService {
     }
   }
 
+  /// True on iOS/iPadOS, where there is no install prompt — the user must use
+  /// Safari's Share → "Add to Home Screen".
+  bool get isIOS {
+    try {
+      final nav = web.window.navigator;
+      final ua = nav.userAgent.toLowerCase();
+      if (ua.contains('iphone') || ua.contains('ipad') || ua.contains('ipod')) {
+        return true;
+      }
+      // iPadOS 13+ reports as a Mac; distinguish it by touch support.
+      return ua.contains('macintosh') && nav.maxTouchPoints > 1;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Whether a native install prompt is currently available to trigger.
+  bool get hasPrompt => _deferredPrompt != null;
+
   /// Triggers the native install prompt. Returns true if a prompt was shown.
   Future<bool> promptInstall() async {
     final prompt = _deferredPrompt;

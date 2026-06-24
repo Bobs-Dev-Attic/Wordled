@@ -4,6 +4,15 @@ All notable changes to Wordled are recorded here, newest first. Versions follow
 [semantic versioning](https://semver.org/). The in-app version is defined in
 `lib/version.dart` and surfaced in **Settings → About / Updates**.
 
+## [1.7.1] — 2026-06-24
+
+### Changed
+- **Install flow** improved. "Install App" now triggers the native install
+  prompt where available (Android / desktop Chrome & Edge) and otherwise shows
+  clear, platform-specific steps — including the manual Safari "Add to Home
+  Screen" instructions for iOS, which has no install prompt. Added a manifest
+  `id` for a stable install identity.
+
 ## [1.7.0] — 2026-06-23
 
 ### Added
