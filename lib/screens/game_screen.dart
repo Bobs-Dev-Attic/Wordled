@@ -64,6 +64,10 @@ class _GameScreenState extends State<GameScreen>
   int _confettiSerial = 0;
   int _confettiCount = 0;
 
+  // Solve-time tracking (first guess -> last guess).
+  DateTime? _firstGuessAt;
+  DateTime? _lastGuessAt;
+
   final FocusNode _focusNode = FocusNode();
   late final AnimationController _shake = AnimationController(
     vsync: this,
@@ -109,7 +113,7 @@ class _GameScreenState extends State<GameScreen>
   Future<void> _loadConfig() async {
     setState(() => _loading = true);
     await widget.words.ensureLoaded(_settings.wordLength);
-    _stats = widget.storage.loadStats(_settings.configKey);
+    _stats = widget.storage.loadStats();
     _startGame(_mode, restore: true);
     if (mounted) setState(() => _loading = false);
   }
@@ -148,6 +152,8 @@ class _GameScreenState extends State<GameScreen>
       _busy = false;
       _hintsUsed = 0;
       _flashKey = null;
+      _firstGuessAt = null;
+      _lastGuessAt = null;
     });
   }
 
@@ -234,6 +240,9 @@ class _GameScreenState extends State<GameScreen>
     }
 
     final row = game.guesses.length;
+    final now = DateTime.now();
+    _firstGuessAt ??= now;
+    _lastGuessAt = now;
     setState(() {
       game.submitGuess(_input);
       _input = '';
@@ -268,12 +277,20 @@ class _GameScreenState extends State<GameScreen>
   }
 
   Future<void> _handleGameOver(WordleGame game) async {
-    if (game.mode == GameMode.daily) {
-      setState(() => _stats.recordDaily(game));
-      await widget.storage.saveStats(_settings.configKey, _stats);
-    }
+    final won = game.status == GameStatus.won;
+    final solveTime = (won && _firstGuessAt != null && _lastGuessAt != null)
+        ? _lastGuessAt!.difference(_firstGuessAt!)
+        : null;
+    setState(() => _stats.record(
+          won: won,
+          guesses: game.guesses.length,
+          wordLength: game.wordLength,
+          hints: _hintsUsed,
+          solveTime: solveTime,
+        ));
+    await widget.storage.saveStats(_stats);
     if (!mounted) return;
-    if (game.status == GameStatus.won) {
+    if (won) {
       // More confetti for fewer tries: scale from a modest burst at the last
       // allowed guess up to a big one for a first-try win.
       final span = (game.maxGuesses - 1).clamp(1, 1 << 30);
@@ -313,7 +330,6 @@ class _GameScreenState extends State<GameScreen>
       context: context,
       builder: (context) => StatsDialog(
         stats: _stats,
-        maxGuesses: game.maxGuesses,
         finishedGame: finished ? game : null,
         onShare: finished
             ? () {

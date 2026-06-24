@@ -22,7 +22,7 @@ class Storage {
   final SharedPreferences _prefs;
 
   static const settingsKey = 'wordled.settings';
-  static const _statsPrefix = 'wordled.stats.';
+  static const _statsKey = 'wordled.stats';
   static const _dailyPrefix = 'wordled.daily.';
   static const _versionKey = 'wordled.lastVersion';
 
@@ -55,10 +55,10 @@ class Storage {
   Future<void> saveLastVersion(String version) =>
       _prefs.setString(_versionKey, version);
 
-  // ---- Stats ----------------------------------------------------------------
+  // ---- Stats (global — every game counts) -----------------------------------
 
-  Stats loadStats(String configKey) {
-    final raw = _prefs.getString('$_statsPrefix$configKey');
+  Stats loadStats() {
+    final raw = _prefs.getString(_statsKey);
     if (raw == null) return Stats();
     try {
       return Stats.decode(raw);
@@ -67,8 +67,8 @@ class Storage {
     }
   }
 
-  Future<void> saveStats(String configKey, Stats stats) =>
-      _prefs.setString('$_statsPrefix$configKey', stats.encode());
+  Future<void> saveStats(Stats stats) =>
+      _prefs.setString(_statsKey, stats.encode());
 
   // ---- Daily progress -------------------------------------------------------
 

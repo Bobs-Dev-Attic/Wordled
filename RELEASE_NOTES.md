@@ -4,6 +4,20 @@ All notable changes to Wordled are recorded here, newest first. Versions follow
 [semantic versioning](https://semver.org/). The in-app version is defined in
 `lib/version.dart` and surfaced in **Settings → About / Updates**.
 
+## [1.9.0] — 2026-06-24
+
+### Changed
+- **Reworked statistics to be global and comprehensive.** Stats now count
+  **every** finished game — any word length, any guess count, daily or new-word
+  (previously only daily games were recorded, so "New Word" games didn't count
+  at all). Added tracking for:
+  - Average guesses per win.
+  - **Solve time** (first guess → last guess): average and best.
+  - **Hints used** (total).
+  - A **per-word-length** played/won breakdown.
+  The guess-distribution histogram now adapts to whatever guess counts you've
+  actually won in. Streaks are now consecutive wins across all games.
+
 ## [1.8.2] — 2026-06-24
 
 ### Changed

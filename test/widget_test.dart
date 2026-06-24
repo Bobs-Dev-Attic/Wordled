@@ -169,39 +169,63 @@ void main() {
   });
 
   group('Stats', () {
-    test('records a daily win and updates streak', () {
+    test('records wins/losses across any length and guesses', () {
       final stats = Stats();
-      final g = WordleGame(
-          answer: 'crane',
-          mode: GameMode.daily,
-          maxGuesses: 6,
-          puzzleNumber: 5);
-      g.submitGuess('crane');
-      stats.recordDaily(g);
-      expect(stats.played, 1);
-      expect(stats.wins, 1);
-      expect(stats.currentStreak, 1);
+      stats.record(
+          won: true,
+          guesses: 3,
+          wordLength: 5,
+          hints: 1,
+          solveTime: const Duration(seconds: 40));
+      stats.record(
+          won: true, guesses: 5, wordLength: 7, hints: 0);
+      stats.record(won: false, guesses: 4, wordLength: 4, hints: 2);
+
+      expect(stats.played, 3);
+      expect(stats.wins, 2);
+      expect(stats.losses, 1);
+      expect(stats.currentStreak, 0); // reset by the loss
+      expect(stats.maxStreak, 2);
+      expect(stats.totalHints, 3);
+      expect(stats.distribution[3], 1);
+      expect(stats.distribution[5], 1);
+      expect(stats.playedByLength[7], 1);
+      expect(stats.winsByLength[5], 1);
+      expect(stats.averageGuesses, 4.0); // (3 + 5) / 2
     });
 
-    test('is idempotent for the same puzzle number', () {
+    test('tracks best and average solve time over timed wins', () {
       final stats = Stats();
-      final g = WordleGame(
-          answer: 'crane',
-          mode: GameMode.daily,
-          maxGuesses: 6,
-          puzzleNumber: 5);
-      g.submitGuess('crane');
-      stats.recordDaily(g);
-      stats.recordDaily(g);
-      expect(stats.played, 1);
+      stats.record(
+          won: true,
+          guesses: 2,
+          wordLength: 5,
+          hints: 0,
+          solveTime: const Duration(seconds: 30));
+      stats.record(
+          won: true,
+          guesses: 4,
+          wordLength: 5,
+          hints: 0,
+          solveTime: const Duration(seconds: 90));
+      expect(stats.bestSolve, const Duration(seconds: 30));
+      expect(stats.averageSolve, const Duration(seconds: 60));
     });
 
     test('round-trips through JSON', () {
-      final stats =
-          Stats(played: 3, wins: 2, currentStreak: 2, maxStreak: 4);
+      final stats = Stats(played: 3, wins: 2, currentStreak: 2, maxStreak: 4);
+      stats.record(
+          won: true,
+          guesses: 4,
+          wordLength: 6,
+          hints: 1,
+          solveTime: const Duration(seconds: 25));
       final restored = Stats.decode(stats.encode());
-      expect(restored.played, 3);
+      expect(restored.played, 4);
       expect(restored.maxStreak, 4);
+      expect(restored.totalHints, 1);
+      expect(restored.bestSolve, const Duration(seconds: 25));
+      expect(restored.playedByLength[6], 1);
     });
   });
 }

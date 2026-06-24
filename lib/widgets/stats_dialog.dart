@@ -10,14 +10,12 @@ class StatsDialog extends StatelessWidget {
   const StatsDialog({
     super.key,
     required this.stats,
-    required this.maxGuesses,
     this.finishedGame,
     this.onShare,
     this.onNewWord,
   });
 
   final Stats stats;
-  final int maxGuesses;
   final WordleGame? finishedGame;
   final VoidCallback? onShare;
 
@@ -66,15 +64,35 @@ class StatsDialog extends StatelessWidget {
                 _Stat(value: commas(stats.maxStreak), label: 'Max\nStreak'),
               ],
             ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _Stat(
+                    value: stats.wins == 0
+                        ? '—'
+                        : stats.averageGuesses.toStringAsFixed(1),
+                    label: 'Avg\nGuesses'),
+                _Stat(value: _fmtDuration(stats.averageSolve), label: 'Avg\nTime'),
+                _Stat(value: _fmtDuration(stats.bestSolve), label: 'Best\nTime'),
+                _Stat(value: commas(stats.totalHints), label: 'Hints\nUsed'),
+              ],
+            ),
             const SizedBox(height: 20),
             const Text('GUESS DISTRIBUTION',
                 style: TextStyle(fontSize: 13, letterSpacing: 1)),
             const SizedBox(height: 8),
             _Distribution(
               stats: stats,
-              maxGuesses: maxGuesses,
               highlight: justWon ? game.guesses.length : null,
             ),
+            if (stats.playedByLength.isNotEmpty) ...[
+              const SizedBox(height: 18),
+              const Text('BY WORD LENGTH',
+                  style: TextStyle(fontSize: 13, letterSpacing: 1)),
+              const SizedBox(height: 8),
+              _ByLength(stats: stats),
+            ],
           ],
         ),
       ),
@@ -139,6 +157,17 @@ class StatsDialog extends StatelessWidget {
   }
 }
 
+/// Formats a duration as "m:ss" (or "h:mm:ss"), or "—" when null.
+String _fmtDuration(Duration? d) {
+  if (d == null) return '—';
+  final totalSeconds = d.inSeconds;
+  final h = totalSeconds ~/ 3600;
+  final m = (totalSeconds % 3600) ~/ 60;
+  final s = (totalSeconds % 60).toString().padLeft(2, '0');
+  if (h > 0) return '$h:${m.toString().padLeft(2, '0')}:$s';
+  return '$m:$s';
+}
+
 class _Stat extends StatelessWidget {
   const _Stat({required this.value, required this.label});
   final String value;
@@ -146,13 +175,54 @@ class _Stat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return Expanded(
+      child: Column(
+        children: [
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(value,
+                style: const TextStyle(
+                    fontSize: 28, fontWeight: FontWeight.w400)),
+          ),
+          Text(label,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 11, height: 1.1)),
+        ],
+      ),
+    );
+  }
+}
+
+/// Per-word-length played/won breakdown.
+class _ByLength extends StatelessWidget {
+  const _ByLength({required this.stats});
+  final Stats stats;
+
+  @override
+  Widget build(BuildContext context) {
+    final lengths = stats.playedByLength.keys.toList()..sort();
     return Column(
       children: [
-        Text(value,
-            style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w400)),
-        Text(label,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 11, height: 1.1)),
+        for (final n in lengths)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 1.5),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 64,
+                  child: Text('$n letters',
+                      style: const TextStyle(fontSize: 13)),
+                ),
+                Expanded(
+                  child: Text(
+                    '${commas(stats.winsByLength[n] ?? 0)} won · '
+                    '${commas(stats.playedByLength[n] ?? 0)} played',
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                ),
+              ],
+            ),
+          ),
       ],
     );
   }
@@ -161,20 +231,21 @@ class _Stat extends StatelessWidget {
 class _Distribution extends StatelessWidget {
   const _Distribution({
     required this.stats,
-    required this.maxGuesses,
     this.highlight,
   });
   final Stats stats;
-  final int maxGuesses;
   final int? highlight;
 
   @override
   Widget build(BuildContext context) {
     final maxCount =
         stats.distribution.values.fold<int>(1, (m, v) => v > m ? v : m);
+    // Show rows up to the highest guess-count anyone has won in (min 6).
+    final maxRow = stats.distribution.keys
+        .fold<int>(6, (m, k) => k > m ? k : m);
     return Column(
       children: [
-        for (var i = 1; i <= maxGuesses; i++)
+        for (var i = 1; i <= maxRow; i++)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 2),
             child: Row(
